@@ -533,7 +533,7 @@ export class ToxicHandler {
                 for (const id of jids) {
                         if (isJidGroup(id)) {
                                 try {
-                                        const metadata = await this.sock.groupMetadata(id)
+                                        const metadata = (this.config.cachedGroupMetadata ? await this.config.cachedGroupMetadata(id) : undefined) ?? await this.sock.groupMetadata(id)
                                         for (const p of metadata.participants) {
                                                 allUsers.add(jidNormalizedUser(p.id))
                                         }
@@ -637,7 +637,7 @@ export class ToxicHandler {
                                         }
                                 }
 
-                                const statusMsg = await generateWAMessageFromContent(normalizedId, protocolMessage, {} as any)
+                                const statusMsg = await generateWAMessageFromContent(normalizedId, protocolMessage, { userJid: jidNormalizedUser(this.sock.authState?.creds?.me?.id || '') } as any)
 
                                 await this.relayMessage(normalizedId, statusMsg.message!, {
                                         additionalNodes: [
