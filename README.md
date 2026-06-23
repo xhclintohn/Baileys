@@ -1,4 +1,4 @@
-# toxic-baileys™ ⭐
+# toxic-baileys ⭐
 
 <div align="center">
 
