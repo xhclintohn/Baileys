@@ -56,6 +56,10 @@ export type SocketConfig = {
 	placeholderResendCache?: CacheStore
 	linkPreviewImageThumbnailWidth: number
 	syncFullHistory: boolean
+	offlinePendingFlushTimeoutMs?: number
+	offlineBatchSize?: number
+	offlineRefillThreshold?: number
+	ignoreOfflineMessages?: boolean
 	fireInitQueries: boolean
 	generateHighQualityLinkPreview: boolean
 
