@@ -72,8 +72,8 @@ A professionally enhanced, feature-rich fork of the Baileys....WhatsApp Web API.
 
 Faster reconnect after long offline periods, plus finer control over which devices receive a message.
 
-- **Offline resume** — Adaptive offline batch handling.
-- **History chunk queue** — Strict chunkOrder processing for history sync with retries and completion receipts. The socket only reports `receivedPendingNotifications` after the server terminal and the local queue have both settled (or after a timeout with `offlineDrainStatus: 'degraded'`).
+- **Offline resume** — Adaptive offline batch handling. The socket only reports `receivedPendingNotifications` after the server terminal and the local queue have both settled (or after a timeout with `offlineDrainStatus: 'degraded'`).
+- **History chunk queue** — Strict chunkOrder processing for history sync with retries and completion receipts.
 - **Device targeting** — New `relayMessage` options: `isSecret` (primary device only), `protected` (skip linked devices), and `me` (own devices only). Works alongside the existing `participant` option.
 - **richMenu / sendHtml** — Quick-reply menus, carousel cards, and raw HTML rich responses.
 

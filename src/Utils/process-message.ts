@@ -62,7 +62,7 @@ const REAL_MSG_STUB_TYPES = new Set([
 
 const REAL_MSG_REQ_ME_STUB_TYPES = new Set([WAMessageStubType.GROUP_PARTICIPANT_ADD])
 
-async function storeTcTokensFromHistorySync(
+export async function storeTcTokensFromHistorySync(
 	chats: Chat[],
 	signalRepository: SignalRepositoryWithLIDStore,
 	keyStore: SignalKeyStoreWithTransaction,
