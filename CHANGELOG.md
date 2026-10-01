@@ -4,6 +4,7 @@
 - Integrated advanced offline-resume controller from vansnowi/baileys for adaptive offline batch requests, proper drain finalization (complete vs degraded), and accurate receivedPendingNotifications signaling
 - Upgraded offline-node-processor with pending/processed/failed counters, waitForIdle, onStanzaProcessed, dispose, and more robust FIFO processing with compacting
 - Added `isSecret`, `protected`, and `me` options to `relayMessage` / `MessageRelayOptions` for recipient-only, primary-device-only, and exclude-linked-devices delivery modes (from vansnowi/baileys)
+- Added `useSqliteAuthState` (Node 22.5+ `node:sqlite`) with optional multi-file migration (from vansnowi/baileys)
 - Added persistent `history-chunk-queue` state machine for ordered history-sync apply + completion receipts (from vansnowi/baileys)
 - Added `richMenu` (quick-reply / carousel cards with optional image header and open-URL footer) and `sendHtml` (render raw HTML via rich response) from vansnowi/baileys
 

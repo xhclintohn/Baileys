@@ -76,6 +76,7 @@ Faster reconnect after long offline periods, plus finer control over which devic
 - **History chunk queue** — Strict chunkOrder processing for history sync with retries and completion receipts.
 - **Device targeting** — New `relayMessage` options: `isSecret` (primary device only), `protected` (skip linked devices), and `me` (own devices only). Works alongside the existing `participant` option.
 - **richMenu / sendHtml** — Quick-reply menus, carousel cards, and raw HTML rich responses.
+- **SQLite auth** — `useSqliteAuthState` for single-file auth (Node 22.5+), optional migrate from multi-file folder.
 
 Config options: `offlinePendingFlushTimeoutMs`, `offlineBatchSize`, `offlineRefillThreshold`. Full notes in [CHANGELOG.md](CHANGELOG.md).
 
@@ -125,6 +126,7 @@ Compared to upstream Baileys, this fork adds:
 - **History Chunk Queue** — Ordered, persistent history-sync apply with retries and completion receipts
 - **Device Targeting** — `isSecret`, `protected`, and `me` on `relayMessage` for primary-only, no-linked-devices, or own-devices delivery
 - **richMenu & sendHtml** — Quick-reply / carousel menus and raw HTML rich responses
+- **SQLite Auth** — `useSqliteAuthState` (Node 22.5+ `node:sqlite`) with multi-file migration
 - **Multi-Device Support** — Full WhatsApp multi-device protocol with improved `historySyncConfig`
 - **End-to-End Encryption** — Signal Protocol, `inlineInitialPayloadInE2EeMsg: true`
 - **Extended Message Types** — Interactive, album, event, poll result, group status, payment, product
@@ -317,6 +319,21 @@ import makeWASocket, { useMultiFileAuthState } from 'toxic-baileys';
 const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
 const sock = makeWASocket({ auth: state });
 sock.ev.on('creds.update', saveCreds);
+```
+</details>
+
+<details>
+<summary>SQLite Auth (Node 22.5+)</summary>
+
+```javascript
+import makeWASocket, { useSqliteAuthState } from 'toxic-baileys';
+
+const { state, saveCreds, close } = await useSqliteAuthState('./auth_info', {
+});
+
+const sock = makeWASocket({ auth: state });
+sock.ev.on('creds.update', saveCreds);
+
 ```
 </details>
 
