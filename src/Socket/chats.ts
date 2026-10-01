@@ -34,6 +34,7 @@ import {
 	type ChatMutationMap,
 	decodePatches,
 	decodeSyncdSnapshot,
+	downloadAndProcessHistorySyncNotification,
 	encodeSyncdPatch,
 	ensureLTHashStateVersion,
 	extractSyncdPatches,
@@ -41,9 +42,11 @@ import {
 	getHistoryMsg,
 	isAppStateSyncIrrecoverable,
 	isMissingKeyError,
+	makeHistoryChunkQueue,
 	MAX_SYNC_ATTEMPTS,
 	newLTHashState,
-	processSyncAction
+	processSyncAction,
+	storeTcTokensFromHistorySync
 } from '../Utils'
 import { makeMutex } from '../Utils/make-mutex'
 import processMessage from '../Utils/process-message'
@@ -119,6 +122,85 @@ export const makeChatsSocket = (config: SocketConfig) => {
 	const appStatePatchMutex = makeMutex()
 
 	const notificationMutex = makeMutex()
+
+	const HISTORY_CHUNK_TYPE = 'history-chunk'
+	const HISTORY_CHUNK_INDEX = 'history-chunk-index'
+	const historyChunkPersistence = {
+		loadAll: async () => {
+			const { [HISTORY_CHUNK_INDEX]: idx } = await authState.keys.get(HISTORY_CHUNK_TYPE, [HISTORY_CHUNK_INDEX])
+			const ids = Array.isArray(idx?.ids) ? idx.ids : []
+			if (!ids.length) {
+				return []
+			}
+			const recs = await authState.keys.get(HISTORY_CHUNK_TYPE, ids)
+			return ids.map((id: string) => recs[id]).filter(Boolean)
+		},
+		put: async (rec: any) => {
+			const { [HISTORY_CHUNK_INDEX]: idx } = await authState.keys.get(HISTORY_CHUNK_TYPE, [HISTORY_CHUNK_INDEX])
+			const ids = new Set(Array.isArray(idx?.ids) ? idx.ids : [])
+			ids.add(rec.id)
+			await authState.keys.set({
+				[HISTORY_CHUNK_TYPE]: {
+					[rec.id]: rec,
+					[HISTORY_CHUNK_INDEX]: { ids: [...ids] }
+				}
+			})
+		},
+		remove: async (id: string) => {
+			const { [HISTORY_CHUNK_INDEX]: idx } = await authState.keys.get(HISTORY_CHUNK_TYPE, [HISTORY_CHUNK_INDEX])
+			const ids = (Array.isArray(idx?.ids) ? idx.ids : []).filter((x: string) => x !== id)
+			await authState.keys.set({
+				[HISTORY_CHUNK_TYPE]: {
+					[id]: null,
+					[HISTORY_CHUNK_INDEX]: { ids }
+				}
+			})
+		}
+	}
+
+	const historyChunkQueue = makeHistoryChunkQueue({
+		logger,
+		orderedSyncTypes: [proto.HistorySync.HistorySyncType.RECENT, proto.HistorySync.HistorySyncType.FULL],
+		persistence: historyChunkPersistence,
+		downloadAndDecode: (notification: any) =>
+			downloadAndProcessHistorySyncNotification(notification, config.options, logger),
+		applyChunk: async (data: any, meta: any) => {
+			if (data.lidPnMappings?.length) {
+				await signalRepository.lidMapping
+					.storeLIDPNMappings(data.lidPnMappings)
+					.catch((err: any) => logger.warn({ err }, 'failed to store LID-PN mappings from history sync'))
+			}
+
+			await storeTcTokensFromHistorySync(data.chats, signalRepository, authState.keys, logger)
+
+			const isOnDemand = meta.syncType === proto.HistorySync.HistorySyncType.ON_DEMAND
+			ev.emit('messaging-history.set', {
+				...data,
+				isLatest: isOnDemand ? undefined : meta.isLatest,
+				chunkOrder: meta.chunkOrder,
+				peerDataRequestSessionId: meta.peerDataRequestSessionId
+			})
+
+			if (!isOnDemand && meta.msgKey) {
+				ev.emit('creds.update', {
+					processedHistoryMessages: [
+						...(authState.creds.processedHistoryMessages || []),
+						{ key: meta.msgKey, messageTimestamp: meta.messageTimestamp }
+					].slice(-100)
+				})
+			}
+		},
+		sendCompletionReceipt: async (msgKey: any) => {
+			ev.emit('history-sync.completion' as any, { key: msgKey })
+		}
+	})
+
+	registerSocketEndHandler(() => historyChunkQueue.dispose())
+
+	const enqueueHistoryChunk = (notification: any, msgKey: any, messageTimestamp?: any) =>
+		historyChunkQueue.enqueue(notification, msgKey, { messageTimestamp })
+
+
 
 	let awaitingSyncTimeout: NodeJS.Timeout | undefined
 
@@ -1243,7 +1325,8 @@ export const makeChatsSocket = (config: SocketConfig) => {
 				keyStore: authState.keys,
 				logger,
 				options: config.options,
-				getMessage
+				getMessage,
+				enqueueHistoryChunk
 			})
 		])
 

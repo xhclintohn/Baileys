@@ -72,7 +72,8 @@ A professionally enhanced, feature-rich fork of the Baileys....WhatsApp Web API.
 
 Faster reconnect after long offline periods, plus finer control over which devices receive a message.
 
-- **Offline resume** — Adaptive offline batch handling. The socket only reports `receivedPendingNotifications` after the server terminal and the local queue have both settled (or after a timeout with `offlineDrainStatus: 'degraded'`).
+- **Offline resume** — Adaptive offline batch handling.
+- **History chunk queue** — Strict chunkOrder processing for history sync with retries and completion receipts. The socket only reports `receivedPendingNotifications` after the server terminal and the local queue have both settled (or after a timeout with `offlineDrainStatus: 'degraded'`).
 - **Device targeting** — New `relayMessage` options: `isSecret` (primary device only), `protected` (skip linked devices), and `me` (own devices only). Works alongside the existing `participant` option.
 - **richMenu / sendHtml** — Quick-reply menus, carousel cards, and raw HTML rich responses.
 
@@ -121,6 +122,7 @@ Compared to upstream Baileys, this fork adds:
 - **Cross-Platform Interop** — Third-party integrator management (BirdyChat, Haiket, and more)
 - **Enhanced Stability** — Improved connection handling, socket end handlers, `ev.destroy()` on close, cleaner pre-key retry logic
 - **Offline Resume** — Adaptive offline backlog drain with complete/degraded status for faster starts after long downtime
+- **History Chunk Queue** — Ordered, persistent history-sync apply with retries and completion receipts
 - **Device Targeting** — `isSecret`, `protected`, and `me` on `relayMessage` for primary-only, no-linked-devices, or own-devices delivery
 - **richMenu & sendHtml** — Quick-reply / carousel menus and raw HTML rich responses
 - **Multi-Device Support** — Full WhatsApp multi-device protocol with improved `historySyncConfig`

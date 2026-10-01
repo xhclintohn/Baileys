@@ -46,6 +46,11 @@ type ProcessMessageContext = {
 	options: RequestInit
 	signalRepository: SignalRepositoryWithLIDStore
 	getMessage: SocketConfig['getMessage']
+	enqueueHistoryChunk?: (
+		notification: proto.Message.IHistorySyncNotification,
+		msgKey: WAMessageKey,
+		messageTimestamp?: any
+	) => Promise<void> | void
 }
 
 const REAL_MSG_STUB_TYPES = new Set([
@@ -264,7 +269,8 @@ const processMessage = async (
 		keyStore,
 		logger,
 		options,
-		getMessage
+		getMessage,
+		enqueueHistoryChunk
 	}: ProcessMessageContext
 ) => {
 	const meId = creds.me!.id
@@ -326,32 +332,36 @@ const processMessage = async (
 				)
 
 				if (process) {
-					if (histNotification.syncType !== proto.HistorySync.HistorySyncType.ON_DEMAND) {
-						ev.emit('creds.update', {
-							processedHistoryMessages: [
-								...(creds.processedHistoryMessages || []),
-								{ key: message.key, messageTimestamp: message.messageTimestamp }
-							]
+					if (enqueueHistoryChunk) {
+						await enqueueHistoryChunk(histNotification, message.key, message.messageTimestamp)
+					} else {
+						if (histNotification.syncType !== proto.HistorySync.HistorySyncType.ON_DEMAND) {
+							ev.emit('creds.update', {
+								processedHistoryMessages: [
+									...(creds.processedHistoryMessages || []),
+									{ key: message.key, messageTimestamp: message.messageTimestamp }
+								]
+							})
+						}
+
+						const data = await downloadAndProcessHistorySyncNotification(histNotification, options, logger)
+
+						if (data.lidPnMappings?.length) {
+							logger?.debug({ count: data.lidPnMappings.length }, 'processing LID-PN mappings from history sync')
+							await signalRepository.lidMapping
+								.storeLIDPNMappings(data.lidPnMappings)
+								.catch(err => logger?.warn({ err }, 'failed to store LID-PN mappings from history sync'))
+						}
+
+						await storeTcTokensFromHistorySync(data.chats, signalRepository, keyStore, logger)
+
+						ev.emit('messaging-history.set', {
+							...data,
+							isLatest: histNotification.syncType !== proto.HistorySync.HistorySyncType.ON_DEMAND ? isLatest : undefined,
+							chunkOrder: histNotification.chunkOrder,
+							peerDataRequestSessionId: histNotification.peerDataRequestSessionId
 						})
 					}
-
-					const data = await downloadAndProcessHistorySyncNotification(histNotification, options, logger)
-
-					if (data.lidPnMappings?.length) {
-						logger?.debug({ count: data.lidPnMappings.length }, 'processing LID-PN mappings from history sync')
-						await signalRepository.lidMapping
-							.storeLIDPNMappings(data.lidPnMappings)
-							.catch(err => logger?.warn({ err }, 'failed to store LID-PN mappings from history sync'))
-					}
-
-					await storeTcTokensFromHistorySync(data.chats, signalRepository, keyStore, logger)
-
-					ev.emit('messaging-history.set', {
-						...data,
-						isLatest: histNotification.syncType !== proto.HistorySync.HistorySyncType.ON_DEMAND ? isLatest : undefined,
-						chunkOrder: histNotification.chunkOrder,
-						peerDataRequestSessionId: histNotification.peerDataRequestSessionId
-					})
 				}
 
 				break
@@ -659,52 +669,7 @@ const processMessage = async (
 				emitGroupRequestJoin(participant, action, method)
 				break
 		}
-	} /*  else if(content?.pollUpdateMessage) {
-		const creationMsgKey = content.pollUpdateMessage.pollCreationMessageKey!
-		const pollMsg = await getMessage(creationMsgKey)
-		if(pollMsg) {
-			const meIdNormalised = jidNormalizedUser(meId)
-			const pollCreatorJid = getKeyAuthor(creationMsgKey, meIdNormalised)
-			const voterJid = getKeyAuthor(message.key, meIdNormalised)
-			const pollEncKey = pollMsg.messageContextInfo?.messageSecret!
-
-			try {
-				const voteMsg = decryptPollVote(
-					content.pollUpdateMessage.vote!,
-					{
-						pollEncKey,
-						pollCreatorJid,
-						pollMsgId: creationMsgKey.id!,
-						voterJid,
-					}
-				)
-				ev.emit('messages.update', [
-					{
-						key: creationMsgKey,
-						update: {
-							pollUpdates: [
-								{
-									pollUpdateMessageKey: message.key,
-									vote: voteMsg,
-									senderTimestampMs: (content.pollUpdateMessage.senderTimestampMs! as Long).toNumber(),
-								}
-							]
-						}
-					}
-				])
-			} catch(err) {
-				logger?.warn(
-					{ err, creationMsgKey },
-					'failed to decrypt poll vote'
-				)
-			}
-		} else {
-			logger?.warn(
-				{ creationMsgKey },
-				'poll creation message not found, cannot decrypt update'
-			)
-		}
-		} */
+}
 
 	if (Object.keys(chat).length > 1) {
 		ev.emit('chats.update', [chat])
