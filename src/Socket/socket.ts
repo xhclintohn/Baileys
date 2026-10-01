@@ -40,6 +40,7 @@ import {
         getNextPreKeysNode,
         makeEventBuffer,
         makeNoiseHandler,
+        makeOfflineResumeController,
         promiseTimeout,
         signedKeyPair,
         xmppSignedPreKey
@@ -949,15 +950,6 @@ export const makeSocket = (config: SocketConfig) => {
                 void end(new Boom('Multi-device beta not joined', { statusCode: DisconnectReason.multideviceMismatch }))
         })
 
-        ws.on('CB:ib,,offline_preview', async (node: BinaryNode) => {
-                logger.info('offline preview received', JSON.stringify(node))
-                await sendNode({
-                        tag: 'ib',
-                        attrs: {},
-                        content: [{ tag: 'offline_batch', attrs: { count: '100' } }]
-                })
-        })
-
         ws.on('CB:ib,,edge_routing', (node: BinaryNode) => {
                 const edgeRoutingNode = getBinaryNodeChild(node, 'edge_routing')
                 const routingInfo = getBinaryNodeChild(edgeRoutingNode, 'routing_info')
@@ -968,26 +960,48 @@ export const makeSocket = (config: SocketConfig) => {
         })
 
         let didStartBuffer = false
+        const offlineResume = makeOfflineResumeController({
+                logger,
+                batchSize: config.offlineBatchSize,
+                refillThreshold: config.offlineRefillThreshold,
+                drainTimeoutMs: config.offlinePendingFlushTimeoutMs,
+                sendBatchRequest: count => {
+                        void sendNode({
+                                tag: 'ib',
+                                attrs: {},
+                                content: [{ tag: 'offline_batch', attrs: { count: String(count) } }]
+                        }).catch(err => logger.warn({ err }, 'failed to send offline_batch request'))
+                },
+                finalize: status => {
+                        if (didStartBuffer) {
+                                ev.flush()
+                                didStartBuffer = false
+                        }
+
+                        ev.emit('connection.update', { receivedPendingNotifications: true, offlineDrainStatus: status })
+                }
+        })
+        socketEndHandlers.push(() => offlineResume.dispose())
         process.nextTick(() => {
                 if (creds.me?.id) {
                         ev.buffer()
                         didStartBuffer = true
+                        offlineResume.begin()
                 }
 
                 ev.emit('connection.update', { connection: 'connecting', receivedPendingNotifications: false, qr: undefined })
         })
 
+        ws.on('CB:ib,,offline_preview', (node: BinaryNode) => {
+                const child = getBinaryNodeChild(node, 'offline_preview')
+                offlineResume.handlePreview(child?.attrs?.count ?? node.attrs?.count)
+        })
+
         ws.on('CB:ib,,offline', (node: BinaryNode) => {
                 const child = getBinaryNodeChild(node, 'offline')
                 const offlineNotifs = +(child?.attrs.count || 0)
-
-                logger.info(`handled ${offlineNotifs} offline messages/notifications`)
-                if (didStartBuffer) {
-                        ev.flush()
-                        logger.trace('flushed events for initial buffer')
-                }
-
-                ev.emit('connection.update', { receivedPendingNotifications: true })
+                logger.info(`server signalled end of ${offlineNotifs} offline messages/notifications`)
+                offlineResume.handleTerminal(offlineNotifs)
         })
 
         ev.on('creds.update', update => {
@@ -1117,7 +1131,8 @@ export const makeSocket = (config: SocketConfig) => {
                 executeUSyncQuery,
                 onWhatsApp,
                 fetchAccountReachoutTimelock,
-                fetchNewChatMessageCap
+                fetchNewChatMessageCap,
+                offlineResume
         }
 }
 

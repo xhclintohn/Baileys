@@ -115,7 +115,8 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                 fetchAccountReachoutTimelock,
                 placeholderResendCache,
                 userDevicesCache,
-                devicesMutex
+                devicesMutex,
+                offlineResume
         } = sock
 
         const getLIDForPN = signalRepository.lidMapping.getLIDForPN.bind(signalRepository.lidMapping)
@@ -1819,6 +1820,9 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                 }
         )
 
+        offlineResume?.attachQueue(offlineNodeProcessor)
+        registerSocketEndHandler(() => offlineNodeProcessor.dispose())
+
         const processNode = async (
                 type: MessageType,
                 node: BinaryNode,
@@ -1845,6 +1849,7 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 
                 if (isOffline) {
                         offlineNodeProcessor.enqueue(type, node)
+                        offlineResume?.noteReceived()
                 } else {
                         await processNodeWithBuffer(node, identifier, exec)
                 }

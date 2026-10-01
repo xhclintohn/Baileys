@@ -610,12 +610,16 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                         additionalNodes,
                         useUserDevicesCache,
                         useCachedGroupMetadata,
-                        statusJidList
+                        statusJidList,
+                        isSecret,
+                        protected: protectedSend,
+                        me: meOnly
                 }: MessageRelayOptions
         ) => {
                 const meId = authState.creds.me!.id
                 const meLid = authState.creds.me?.lid
                 const isRetryResend = Boolean(participant?.jid)
+                const isRecipientOnly = Boolean(participant?.jid)
                 let shouldIncludeDeviceIdentity = isRetryResend
                 const statusJid = 'status@broadcast'
 
@@ -630,6 +634,13 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 msgId = msgId || generateMessageIDV2(meId)
                 useUserDevicesCache = useUserDevicesCache !== false
                 useCachedGroupMetadata = useCachedGroupMetadata !== false && !isStatus
+
+                if ((isRecipientOnly || isSecret || protectedSend || meOnly) && !isGroup && !isStatus) {
+                        additionalAttributes = {
+                                ...additionalAttributes,
+                                device_fanout: 'false'
+                        }
+                }
 
                 const participants: BinaryNode[] = []
                 const destinationJid = !isStatus ? finalJid : statusJid
@@ -866,6 +877,12 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                         }
 
                                         const isMe = user === mePnUser || user === meLidUser
+                                        const hasDevice = jid.includes(':')
+
+                                        if (isRecipientOnly && isMe) continue
+                                        if (isSecret && !(!isMe && !hasDevice)) continue
+                                        if (protectedSend && !isMe && hasDevice) continue
+                                        if (meOnly && !isMe) continue
 
                                         if (isMe) {
                                                 meRecipients.push(jid)
