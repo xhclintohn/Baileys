@@ -1,4 +1,5 @@
 import NodeCache from '@cacheable/node-cache'
+import { randomBytes, randomUUID } from 'crypto'
 import { Boom } from '@hapi/boom'
 import { proto } from '../../WAProto/index.js'
 import { DEFAULT_CACHE_TTLS, WA_DEFAULT_EPHEMERAL } from '../Defaults'
@@ -1315,6 +1316,318 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 return relayMessage(jid, interactiveMsg.message!, { messageId: interactiveMsg.key.id! })
         }
 
+
+	const richMenu = async (
+		target: string,
+		content: {
+			header?: {
+				disclaimer?: boolean
+				disclaimerText?: string
+				image?: { url?: string; inline?: boolean; mime_type?: string; width?: number; height?: number }
+				title?: string
+			}
+			body?: {
+				cards?: Array<{ title?: string; buttons?: string[]; toast?: string }>
+				buttons?: string[]
+				title?: string
+				toast?: string
+				carousel?: boolean
+				row?: boolean
+			}
+			footer?: {
+				text?: string
+				url?: string
+				image?: { url?: string; mime_type?: string; width?: number; height?: number }
+			}
+			contextInfo?: proto.IContextInfo
+		} = {}
+	) => {
+		const header = content?.header
+		const body = content?.body
+		const footer = content?.footer
+		let contextExtra: Record<string, any> = {}
+		const sections: any[] = []
+		const randomToolId = () => randomBytes(8).toString('hex')
+
+		if (header) {
+			const {
+				disclaimer = false,
+				disclaimerText = ' ',
+				image = { inline: false } as any,
+				title = ''
+			} = header ?? {}
+
+			if (disclaimer) {
+				contextExtra = {
+					messageContextInfo: {
+						botMetadata: {
+							messageDisclaimerText: disclaimerText
+						}
+					}
+				}
+			}
+
+			if (title) {
+				sections.push({
+					__typename: 'GenAIUnifiedResponseSection',
+					view_model: {
+						__typename: 'GenAISingleLayoutViewModel',
+						primitive: {
+							__typename: 'FOATextPrimitive',
+							text: '# ' + title
+						}
+					}
+				})
+			}
+
+			if (image?.url) {
+				if (image?.inline) {
+					sections.push({
+						__typename: 'GenAIUnifiedResponseSection',
+						view_model: {
+							__typename: 'GenAISingleLayoutViewModel',
+							primitive: {
+								__typename: 'GenAIMarkdownTextUXPrimitive',
+								text: '{{header}}.{{/header}}',
+								inline_entities: [
+									{
+										__typename: 'GenAITextInlineEntity',
+										key: 'header',
+										metadata: {
+											__typename: 'GenAILatexItem',
+											latex_expression: '.',
+											font_height: 24,
+											padding: 4,
+											latex_image: {
+												__typename: 'GenAIMediaItem',
+												mime_type: image.mime_type || 'image/png',
+												url: image.url,
+												url_fallback: image.url,
+												width: image.width || 500,
+												height: image.height || 500,
+												expiration_timestamp_ms: Date.now() + 86400000
+											}
+										}
+									}
+								]
+							}
+						}
+					})
+				} else {
+					sections.push({
+						__typename: 'GenAIUnifiedResponseSection',
+						view_model: {
+							__typename: 'GenAISingleLayoutViewModel',
+							primitive: {
+								__typename: 'GenAIImagePrimitive',
+								preview_image: {
+									__typename: 'GenAIMediaItem',
+									mime_type: image.mime_type || 'image/png',
+									url: image.url
+								},
+								full_image: {
+									__typename: 'GenAIMediaItem',
+									mime_type: image.mime_type || 'image/png',
+									url: image.url
+								}
+							}
+						}
+					})
+				}
+			}
+		}
+
+		if (body) {
+			const {
+				cards = null,
+				buttons = null,
+				title = '',
+				toast = '',
+				carousel = false,
+				row = false
+			} = body ?? {}
+
+			if (carousel || row) {
+				if (cards && cards.length >= 1) {
+					sections.push({
+						__typename: 'GenAIUnifiedResponseSection',
+						view_model: {
+							primitives: cards.map(card => ({
+								__typename: 'GenAI3PExtWidgetPrimitive',
+								header: {
+									__typename: 'GenAI3PExtWidgetStandardHeader',
+									title: card?.title || ''
+								},
+								body: {
+									__typename: 'GenAI3PExtCalendarEventList',
+									ctas: (card?.buttons || []).map(text => ({
+										label: text,
+										state: 'PENDING',
+										kind: 'OTHER',
+										tool_call_id: randomToolId(),
+										toast: {
+											label: card?.toast || '',
+											__typename: 'GenAI3PExtWidgetToast'
+										},
+										__typename: 'GenAI3PExtWidgetCTA'
+									})),
+									sections: []
+								}
+							})),
+							__typename: carousel ? 'GenAIHScrollLayoutViewModel' : 'GenAIActionRowLayoutViewModel'
+						}
+					})
+				}
+			} else if (buttons?.length) {
+				sections.push({
+					__typename: 'GenAIUnifiedResponseSection',
+					view_model: {
+						primitive: {
+							__typename: 'GenAI3PExtWidgetPrimitive',
+							header: {
+								__typename: 'GenAI3PExtWidgetStandardHeader',
+								title: title || ''
+							},
+							body: {
+								__typename: 'GenAI3PExtCalendarEventList',
+								ctas: buttons.map(text => ({
+									label: text,
+									state: 'PENDING',
+									kind: 'OTHER',
+									tool_call_id: randomToolId(),
+									toast: {
+										label: toast,
+										__typename: 'GenAI3PExtWidgetToast'
+									},
+									__typename: 'GenAI3PExtWidgetCTA'
+								})),
+								sections: []
+							}
+						},
+						__typename: 'GenAISingleLayoutViewModel'
+					}
+				})
+			}
+		}
+
+		if (footer) {
+			const { text = '', url = '', image = {} as any } = footer ?? {}
+			const img: any[] = []
+			if (image?.url) {
+				img.push({
+					__typename: 'GenAIMarkdownTextUXPrimitive',
+					text: '{{header}}.{{/header}}',
+					inline_entities: [
+						{
+							__typename: 'GenAITextInlineEntity',
+							key: 'header',
+							metadata: {
+								__typename: 'GenAILatexItem',
+								latex_expression: '.',
+								font_height: 24,
+								padding: -5,
+								latex_image: {
+									__typename: 'GenAIMediaItem',
+									mime_type: image.mime_type || 'image/png',
+									url: image.url,
+									url_fallback: image.url,
+									width: image.width || 100,
+									height: image.height || 100,
+									expiration_timestamp_ms: Date.now() + 86400000
+								}
+							}
+						}
+					]
+				})
+			}
+
+			sections.push({
+				view_model: {
+					primitives: [
+						{
+							cta_text: text || 'Open',
+							cta_type: 'OPEN_URL',
+							cta_url: url || '',
+							__typename: 'GenAIFooterActionPrimitive'
+						},
+						...img
+					],
+					__typename: 'GenAIActionRowLayoutViewModel'
+				}
+			})
+		}
+
+		const waMsg = generateWAMessageFromContent(
+			target,
+			{
+				...contextExtra,
+				botForwardedMessage: {
+					message: {
+						richResponseMessage: {
+							unifiedResponse: {
+								data: Buffer.from(JSON.stringify({ sections })).toString('base64')
+							},
+							contextInfo: {
+								isForwarded: true,
+								forwardOrigin: 4,
+								...(content?.contextInfo ?? {})
+							}
+						}
+					}
+				}
+			} as any,
+			{}
+		)
+
+		await relayMessage(target, waMsg.message!, { messageId: waMsg.key.id! })
+		return waMsg
+	}
+
+	const sendHtml = async (jid: string, html = '') => {
+		const waMsg = generateWAMessageFromContent(
+			jid,
+			{
+				botForwardedMessage: {
+					message: {
+						richResponseMessage: {
+							messageType: 1,
+							unifiedResponse: {
+								data: Buffer.from(
+									JSON.stringify({
+										__typename: 'GenAIUnifiedResponse',
+										response_id: randomUUID(),
+										sections: [
+											{
+												__typename: 'GenAIUnifiedResponseSection',
+												view_model: {
+													__typename: 'GenAISingleLayoutViewModel',
+													primitive: {
+														__typename: 'FOAHtmlPrimitiveDemoDONOTUSE',
+														trusted_sources: [],
+														payload: String(html).trim()
+													}
+												}
+											}
+										]
+									})
+								).toString('base64')
+							},
+							contextInfo: {
+								isForwarded: true,
+								forwardOrigin: 4
+							}
+						}
+					}
+				}
+			} as any,
+			{}
+		)
+
+		await relayMessage(jid, waMsg.message!, { messageId: waMsg.key.id! })
+		return waMsg
+	}
+
+
         return {
                 ...sock,
                 issuePrivacyTokens,
@@ -1509,6 +1822,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 },
                 sendInteractive,
                 inappsignup: sendInteractive,
-                inapp_signup: sendInteractive
+                inapp_signup: sendInteractive,
+                richMenu,
+                sendHtml
         }
 }

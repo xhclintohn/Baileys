@@ -74,6 +74,7 @@ Faster reconnect after long offline periods, plus finer control over which devic
 
 - **Offline resume** — Adaptive offline batch handling. The socket only reports `receivedPendingNotifications` after the server terminal and the local queue have both settled (or after a timeout with `offlineDrainStatus: 'degraded'`).
 - **Device targeting** — New `relayMessage` options: `isSecret` (primary device only), `protected` (skip linked devices), and `me` (own devices only). Works alongside the existing `participant` option.
+- **richMenu / sendHtml** — Quick-reply menus, carousel cards, and raw HTML rich responses.
 
 Config options: `offlinePendingFlushTimeoutMs`, `offlineBatchSize`, `offlineRefillThreshold`. Full notes in [CHANGELOG.md](CHANGELOG.md).
 
@@ -121,6 +122,7 @@ Compared to upstream Baileys, this fork adds:
 - **Enhanced Stability** — Improved connection handling, socket end handlers, `ev.destroy()` on close, cleaner pre-key retry logic
 - **Offline Resume** — Adaptive offline backlog drain with complete/degraded status for faster starts after long downtime
 - **Device Targeting** — `isSecret`, `protected`, and `me` on `relayMessage` for primary-only, no-linked-devices, or own-devices delivery
+- **richMenu & sendHtml** — Quick-reply / carousel menus and raw HTML rich responses
 - **Multi-Device Support** — Full WhatsApp multi-device protocol with improved `historySyncConfig`
 - **End-to-End Encryption** — Signal Protocol, `inlineInitialPayloadInE2EeMsg: true`
 - **Extended Message Types** — Interactive, album, event, poll result, group status, payment, product
@@ -277,6 +279,26 @@ await sock.relayMessage(jid, message, { protected: true })
 
 // Own devices only
 await sock.relayMessage(jid, message, { me: true })
+
+// richMenu — quick replies (or carousel cards)
+await sock.richMenu(jid, {
+  header: { title: 'Main Menu', image: { url: 'https://example.com/banner.png' } },
+  body: { title: 'Pick one', buttons: ['Profile', 'Settings', 'Help'], toast: 'opening...' },
+  footer: { text: 'Join us', url: 'https://example.com' }
+})
+
+await sock.richMenu(jid, {
+  body: {
+    carousel: true,
+    cards: [
+      { title: 'Card 1', buttons: ['A', 'B'] },
+      { title: 'Card 2', buttons: ['C', 'D'] }
+    ]
+  }
+})
+
+// sendHtml — render raw HTML
+await sock.sendHtml(jid, '<h1>Hello</h1><p>from HTML</p>')
 ```
 </details>
 
