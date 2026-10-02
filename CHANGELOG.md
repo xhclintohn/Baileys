@@ -1,3 +1,14 @@
+# 1.5.0
+
+### Features
+- Meta AI (Hatch): `sendMetaAI(text, opts)` for 1:1 and group invoke with messageSecret, botMetadata, and `<bot>` persona node
+- `extractMetaAiText()`, `textFromRichResponse()`, `parseUnifiedResponseData()`, `decodeUnifiedResponseInPlace()` for Meta AI reply shapes
+- `decryptMsmsgBotMessage` / `decodeDecryptedMsmsgMessage` helpers for bot msmsg payloads
+
+### Fixes
+- `@bot` / Meta AI JIDs are enumerated as device 0 and included in Signal pre-key fetch so prompts encrypt and reach the bot
+- `isJidBot` now also matches `@bot` server JIDs
+
 # 1.4.0 (2026-10-01)
 
 ### Features

@@ -1,0 +1,20 @@
+Repo: xhclintohn/Baileys
+Branch: test only (never main)
+
+Overwrite these files (paths match the zip):
+
+lib/Socket/messages-send.js
+src/Socket/messages-send.ts
+lib/Utils/meta-ai.js          (NEW)
+src/Utils/meta-ai.ts          (NEW)
+lib/Utils/index.js
+src/Utils/index.ts
+lib/WABinary/jid-utils.js
+src/WABinary/jid-utils.ts
+package.json
+CHANGELOG.md
+
+Commit message:
+feat: Meta AI sendMetaAI, bot session fix, extractMetaAiText
+
+Do not add comments. Do not push to main.

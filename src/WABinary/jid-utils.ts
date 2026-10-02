@@ -97,7 +97,7 @@ export const isHostedLidUser = (jid: string | undefined) => jid?.endsWith('@host
 
 const botRegexp = /^1313555\d{4}$|^131655500\d{2}$/
 
-export const isJidBot = (jid: string | undefined) => jid && botRegexp.test(jid.split('@')[0]!) && jid.endsWith('@c.us')
+export const isJidBot = (jid: string | undefined) => jid && ((botRegexp.test(jid.split('@')[0]!) && jid.endsWith('@c.us')) || jid.endsWith('@bot'))
 
 export const jidNormalizedUser = (jid: string | undefined) => {
 	const result = jidDecode(jid)
