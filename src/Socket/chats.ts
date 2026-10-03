@@ -1206,6 +1206,31 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		)
 	}
 
+
+	const archiveChat = (jid: string, archive: boolean, lastMessages: any[]) => {
+		return chatModify({ archive, lastMessages }, jid)
+	}
+
+	const clearChat = (jid: string, lastMessages: any[]) => {
+		return chatModify({ clear: true, lastMessages }, jid)
+	}
+
+	const deleteChat = (jid: string, lastMessages: any[]) => {
+		return chatModify({ delete: true, lastMessages }, jid)
+	}
+
+	const pinChat = (jid: string, pin: boolean) => {
+		return chatModify({ pin }, jid)
+	}
+
+	const muteChat = (jid: string, mute: number | null) => {
+		return chatModify({ mute }, jid)
+	}
+
+	const markChatRead = (jid: string, markRead: boolean, lastMessages: any[]) => {
+		return chatModify({ markRead, lastMessages }, jid)
+	}
+
 	const executeInitQueries = async () => {
 		await Promise.all([fetchProps(), fetchBlocklist(), fetchPrivacySettings()])
 	}
@@ -1506,6 +1531,12 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		getBusinessProfile,
 		resyncAppState,
 		chatModify,
+		archiveChat,
+		clearChat,
+		deleteChat,
+		pinChat,
+		muteChat,
+		markChatRead,
 		cleanDirtyBits,
 		addOrEditContact,
 		removeContact,

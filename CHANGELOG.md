@@ -1,3 +1,13 @@
+# 1.5.1
+
+### Features
+- Chat helpers: `archiveChat`, `clearChat`, `deleteChat`, `pinChat`, `muteChat`, `markChatRead` (thin wrappers over `chatModify`)
+- Calls: `acceptCall`, `terminateCall` alongside existing `rejectCall`
+- `sendGroupStatus` alias for status/group story sends (same path as `sendStatusMention`)
+
+### Updates
+- WA web version bumped to `[2, 3000, 1049110567]`
+
 # 1.5.0
 
 ### Features

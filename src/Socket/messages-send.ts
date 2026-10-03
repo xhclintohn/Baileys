@@ -1655,6 +1655,9 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 sendStatusMention: async (content: Record<string, any>, jids: string[] = []) => {
                         return toxicHandler.sendStatusWhatsApp(content, jids)
                 },
+                sendGroupStatus: async (content: Record<string, any>, jids: string[] = []) => {
+                        return toxicHandler.sendStatusWhatsApp(content, jids)
+                },
                 updateMediaMessage: async (message: WAMessage) => {
                         const content = assertMediaContent(message.message)
                         const mediaKey = content.mediaKey!

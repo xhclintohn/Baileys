@@ -9,7 +9,7 @@ If you find this project helpful, consider [following me on GitHub](https://gith
 [![npm downloads](https://img.shields.io/npm/dm/toxic-baileys.svg?style=for-the-badge)](https://www.npmjs.com/package/toxic-baileys)
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=for-the-badge&logo=github)](https://github.com/xhclintohn/Baileys)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen?style=for-the-badge)](https://nodejs.org)
-[![Changelog](https://img.shields.io/badge/Changelog-1.4.0-blue?style=for-the-badge)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/Changelog-1.5.1-blue?style=for-the-badge)](CHANGELOG.md)
 
 </div>
 
@@ -50,6 +50,7 @@ A professionally enhanced, feature-rich fork of the Baileys....WhatsApp Web API.
   - [Payment Request Messages](#payment-request-messages)
   - [Product Messages](#product-messages)
   - [Button & Template Messages](#button--template-messages)
+  - [Meta AI](#meta-ai)
 - [Rich Message Builders](#rich-message-builders)
 - [Chat & Message Management](#chat--message-management)
 - [Group Management](#group-management)
@@ -67,6 +68,24 @@ A professionally enhanced, feature-rich fork of the Baileys....WhatsApp Web API.
 ---
 
 ## What's New
+
+### 1.5.1
+
+- **Chat helpers** — `archiveChat`, `clearChat`, `deleteChat`, `pinChat`, `muteChat`, `markChatRead`
+- **Calls** — `acceptCall` and `terminateCall` (with existing `rejectCall`)
+- **`sendGroupStatus`** — alias for group/status story sends
+- **WA version** — `[2, 3000, 1049110567]`
+
+### 1.5.0
+
+Talk to Meta AI (Hatch) from your bot and read the streamed reply as plain text.
+
+- **`sendMetaAI(text, opts?)`** — One call for 1:1 or group invoke. Sets `messageSecret`, full `botMetadata`, and the `<bot>` persona node so the server routes to the AI backend.
+- **Bot Signal sessions** — `@bot` JIDs are treated as device 0 and included in pre-key fetch so the prompt actually encrypts and reaches the bot (no more silent one-tick sends).
+- **`extractMetaAiText(message)`** — Turns any reply shape (plain text, streaming edits, `richResponseMessage`, unifiedResponse) into one clean string.
+- **Helpers** — `textFromRichResponse`, `parseUnifiedResponseData`, `decodeUnifiedResponseInPlace`, plus optional msmsg decrypt helpers.
+
+Full notes in [CHANGELOG.md](CHANGELOG.md).
 
 ### 1.4.0
 
@@ -117,7 +136,9 @@ Compared to upstream Baileys, this fork adds:
 
 ## Features
 
-- **Modern & Fast** — Latest WA version `[2,3000,1035194821]`, optimised pre-key upload (812 keys)
+- **Modern & Fast** — Latest WA version `[2,3000,1049110567]`, optimised pre-key upload (812 keys)
+- **Meta AI (Hatch)** — `sendMetaAI` + `extractMetaAiText` for prompting Meta AI and reading streamed replies
+- **Chat helpers & calls** — archive/clear/delete/pin/mute/markRead helpers; accept/terminate call
 - **Full LID Identity Resolution** — Bidirectional LIDPN mapping with LRU cache, USync lookup, and persistent storage
 - **AI Groups Support** — Create and manage WhatsApp's AI-powered group type
 - **Cross-Platform Interop** — Third-party integrator management (BirdyChat, Haiket, and more)
@@ -1030,6 +1051,84 @@ await sock.sendMessage(jid, {
 });
 ```
 </details>
+
+---
+
+
+
+## Chat Modifiers
+
+Thin helpers over `chatModify` (same app-state patches WhatsApp uses):
+
+```js
+await sock.archiveChat(jid, true, [lastMsg])
+await sock.clearChat(jid, [lastMsg])
+await sock.deleteChat(jid, [lastMsg])
+await sock.pinChat(jid, true)
+await sock.muteChat(jid, Date.now() + 8 * 60 * 60 * 1000)
+await sock.muteChat(jid, null)
+await sock.markChatRead(jid, true, [lastMsg])
+await sock.markChatRead(jid, false, [lastMsg])
+
+// Or the raw form:
+await sock.chatModify({ archive: true, lastMessages: [lastMsg] }, jid)
+await sock.chatModify({ delete: true, lastMessages: [lastMsg] }, jid)
+await sock.star(jid, [{ id: msg.key.id, fromMe: true }], true)
+```
+
+### Calls
+
+```js
+await sock.rejectCall(callId, callFrom)
+await sock.acceptCall(callId, callFrom)
+await sock.terminateCall(callId, callFrom)
+```
+
+### Group / status stories
+
+```js
+await sock.sendGroupStatus({ text: 'hello' }, [groupJid])
+await sock.sendStatusMention({ text: 'hello' }, [groupJid])
+```
+
+---
+
+## Meta AI
+
+Prompt Meta AI and read the reply as a normal string.
+
+```js
+import makeWASocket, { extractMetaAiText } from 'toxic-baileys'
+
+// 1:1 chat with Meta AI
+const id = await sock.sendMetaAI('What is the weather in Nairobi?')
+
+// Summon Meta AI inside a group
+await sock.sendMetaAI('Summarise this chat', {
+  jid: groupJid,
+  mention: true
+})
+
+// Optional overrides
+await sock.sendMetaAI('Hello', {
+  sessionId: 'my-session-id',
+  personaType: 'default',
+  agentEngagementType: 'direct_chat'
+})
+```
+
+When a reply arrives:
+
+```js
+sock.ev.on('messages.upsert', ({ messages }) => {
+  for (const msg of messages) {
+    const text = extractMetaAiText(msg.message)
+    if (text) console.log('Meta AI:', text)
+  }
+})
+```
+
+`extractMetaAiText` handles plain text, streaming `MESSAGE_EDIT` chunks, and `richResponseMessage` / unifiedResponse payloads.
 
 ---
 
