@@ -1,5 +1,9 @@
 import type { KeyPair } from '../Types/index.js';
-export { md5, hkdf } from 'whatsapp-rust-bridge';
+export declare function md5(buffer: Buffer | Uint8Array): Buffer;
+export declare function hkdf(buffer: Uint8Array | Buffer, expandedLength: number, info?: {
+    salt?: Buffer;
+    info?: string;
+}): Buffer;
 export declare const generateSignalPubKey: (pubKey: Uint8Array | Buffer) => any;
 export declare const Curve: {
     generateKeyPair: () => KeyPair;
@@ -12,15 +16,14 @@ export declare const signedKeyPair: (identityKeyPair: KeyPair, keyId: number) =>
     signature: any;
     keyId: number;
 };
-export declare function aesEncryptGCM(plaintext: Uint8Array, key: Uint8Array, iv: Uint8Array, additionalData: Uint8Array): any;
-export declare function aesDecryptGCM(ciphertext: Uint8Array, key: Uint8Array, iv: Uint8Array, additionalData: Uint8Array): any;
-export declare function aesEncryptCTR(plaintext: Uint8Array, key: Uint8Array, iv: Uint8Array): any;
-export declare function aesDecryptCTR(ciphertext: Uint8Array, key: Uint8Array, iv: Uint8Array): any;
-export declare function aesDecrypt(buffer: Uint8Array, key: Uint8Array): any;
-export declare function aesDecryptWithIV(buffer: Uint8Array, key: Uint8Array, IV: Uint8Array): any;
-export declare function aesEncrypt(buffer: Uint8Array, key: Uint8Array): any;
-export declare function aesEncrypWithIV(buffer: Buffer, key: Buffer, IV: Buffer): any;
-export declare function hmacSign(buffer: Buffer | Uint8Array, key: Buffer | Uint8Array, variant?: 'sha256' | 'sha512'): any;
-export declare function sha256(buffer: Buffer): any;
+export declare function aesEncryptGCM(plaintext: Uint8Array, key: Uint8Array, iv: Uint8Array, additionalData: Uint8Array): Buffer;
+export declare function aesDecryptGCM(ciphertext: Uint8Array, key: Uint8Array, iv: Uint8Array, additionalData: Uint8Array): Buffer;
+export declare function aesEncryptCTR(plaintext: Uint8Array, key: Uint8Array, iv: Uint8Array): Buffer;
+export declare function aesDecryptCTR(ciphertext: Uint8Array, key: Uint8Array, iv: Uint8Array): Buffer;
+export declare function aesDecrypt(buffer: Uint8Array, key: Uint8Array): Buffer;
+export declare function aesDecryptWithIV(buffer: Uint8Array, key: Uint8Array, IV: Uint8Array): Buffer;
+export declare function aesEncrypt(buffer: Uint8Array | Buffer, key: Uint8Array | Buffer): Buffer;
+export declare function aesEncrypWithIV(buffer: Buffer, key: Buffer, IV: Buffer): Buffer;
+export declare function hmacSign(buffer: Buffer | Uint8Array, key: Buffer | Uint8Array, variant?: 'sha256' | 'sha512'): Buffer;
+export declare function sha256(buffer: Buffer): Buffer;
 export declare function derivePairingCodeKey(pairingCode: string, salt: Buffer): Promise<Buffer>;
-//# sourceMappingURL=crypto.d.ts.map

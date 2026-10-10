@@ -1,5 +1,5 @@
 import { Boom } from '@hapi/boom'
-import { expandAppStateKeys } from 'whatsapp-rust-bridge'
+import { expandAppStateKeys } from './app-state-keys.js'
 import { proto } from '../../WAProto/index.js'
 import type {
 	BaileysEventEmitter,
