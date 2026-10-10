@@ -176,25 +176,39 @@ export const prepareWAMessageMedia = async (
 		)
 
 		const fileSha256B64 = fileSha256.toString('base64')
-		const { directPath, thumbnailDirectPath, thumbnailSha256 } = await options.upload(filePath, {
+		const uploadResult = await options.upload(filePath, {
 			fileEncSha256B64: fileSha256B64,
 			mediaType: mediaType,
 			timeoutMs: options.mediaUploadTimeoutMs,
 			newsletter: true
 		})
+		const { directPath, thumbnailDirectPath, thumbnailSha256 } = uploadResult
 
 		await fs.unlink(filePath)
 
+		if (!directPath) {
+			throw new Boom('Newsletter media upload returned no directPath', { statusCode: 500 })
+		}
+
+		const mediaPayload: any = {
+			directPath,
+			fileSha256,
+			fileLength,
+			mimetype: uploadData.mimetype,
+			caption: uploadData.caption,
+			jpegThumbnail: uploadData.jpegThumbnail,
+			height: uploadData.height,
+			width: uploadData.width,
+			ptt: uploadData.ptt,
+			seconds: uploadData.seconds,
+			fileName: uploadData.fileName,
+			thumbnailDirectPath,
+			thumbnailSha256: thumbnailSha256 ? Buffer.from(thumbnailSha256, 'base64') : undefined
+		}
+		Object.keys(mediaPayload).forEach((k) => mediaPayload[k] === undefined && delete mediaPayload[k])
+
 		const obj = WAProto.Message.fromObject({
-			[`${mediaType}Message`]: (MessageTypeProto as any)[mediaType].fromObject({
-				directPath,
-				fileSha256,
-				fileLength,
-				thumbnailDirectPath,
-				thumbnailSha256: thumbnailSha256 ? Buffer.from(thumbnailSha256, 'base64') : undefined,
-				...uploadData,
-				media: undefined
-			})
+			[`${mediaType}Message`]: (MessageTypeProto as any)[mediaType].fromObject(mediaPayload)
 		})
 
 		if (uploadData.ptv) {
