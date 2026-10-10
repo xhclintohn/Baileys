@@ -1,3 +1,8 @@
+# 1.5.2
+
+### Fixes
+- Newsletter/channel media upload now uses `/newsletter/newsletter-*` paths with `server_thumb_gen=1` so directPath is `/m1/` and images/videos appear in channels (was `/o1/` via `/mms/*`, ACK 479)
+
 # 1.5.1
 
 ### Features
