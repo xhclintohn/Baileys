@@ -102,6 +102,18 @@ export const MEDIA_PATH_MAP: { [T in MediaType]?: string } = {
 	'biz-cover-photo': '/pps/biz-cover-photo'
 }
 
+export const NEWSLETTER_MEDIA_PATH_MAP: { [T in MediaType]?: string } = {
+	image: '/newsletter/newsletter-image',
+	video: '/newsletter/newsletter-video',
+	document: '/newsletter/newsletter-document',
+	audio: '/newsletter/newsletter-audio',
+	gif: '/newsletter/newsletter-gif',
+	ptt: '/newsletter/newsletter-ptt',
+	ptv: '/newsletter/newsletter-ptv',
+	sticker: '/newsletter/newsletter-sticker-pack',
+	'thumbnail-link': '/newsletter/newsletter-image'
+}
+
 export const MEDIA_HKDF_KEY_MAPPING = {
 	audio: 'Audio',
 	document: 'Document',
@@ -122,4 +134,22 @@ export const MEDIA_HKDF_KEY_MAPPING = {
 	'payment-bg-image': 'Payment Background',
 	ptv: 'Video',
 	'biz-cover-photo': 'Image'
+}
+
+export type MediaType = keyof typeof MEDIA_HKDF_KEY_MAPPING
+
+export const MEDIA_KEYS = Object.keys(MEDIA_PATH_MAP) as MediaType[]
+
+export const HISTORY_SYNC_PAUSED_TIMEOUT_MS = 120_000
+
+export const MIN_PREKEY_COUNT = 5
+export const INITIAL_PREKEY_COUNT = 812
+export const UPLOAD_TIMEOUT = 30000
+export const MIN_UPLOAD_INTERVAL = 60_000
+
+export const DEFAULT_CACHE_TTLS = {
+	SIGNAL_STORE: 5 * 60,
+	MSG_RETRY: 60 * 60,
+	CALL_OFFER: 5 * 60,
+	USER_DEVICES: 5 * 60
 }
