@@ -2,7 +2,7 @@
   "name": "toxic-baileys",
   "type": "module",
   "version": "1.5.2",
-  "description": "WhatsApp API Enhancement — Feature-rich fork of Baileys by xhclintohn",
+  "description": "WhatsApp API Enhancement \u2014 Feature-rich fork of Baileys by xhclintohn",
   "keywords": [
     "whatsapp",
     "baileys",
@@ -29,7 +29,16 @@
   ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
+    "index.js",
     "lib/**/*",
     "WAProto/**/*",
     "engine-requirements.js",
