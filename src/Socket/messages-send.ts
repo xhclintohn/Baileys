@@ -24,6 +24,7 @@ import {
         encodeWAMessage,
         encryptMediaRetryRequest,
         extractDeviceJids,
+        generateBotHtmlResponse,
         generateMessageID,
         generateMessageIDV2,
         generateParticipantHashV2,
@@ -1664,6 +1665,59 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 	}
 
 
+	const relayRichMessage = async (jid: string, fullMsg: WAMessage, options: any = {}) => {
+		const relayOptions = {
+			...options,
+			messageId: fullMsg.key.id,
+			useCachedGroupMetadata: options.useCachedGroupMetadata,
+			statusJidList: options.statusJidList,
+			...options.relayOptions
+		}
+		await relayMessage(jid, fullMsg.message!, relayOptions)
+		const richEnvelope = (fullMsg.message as any)?.botForwardedMessage?.message?.richResponseMessage
+		if (options.renderRichResponse !== false && richEnvelope) {
+			const editContent = proto.Message.fromObject({
+				botForwardedMessage: {
+					message: {
+						protocolMessage: {
+							key: {
+								remoteJid: jid,
+								fromMe: true,
+								id: fullMsg.key.id
+							},
+							type: proto.Message.ProtocolMessage.Type.MESSAGE_EDIT,
+							editedMessage: fullMsg.message
+						}
+					}
+				}
+			})
+			const editMessage = generateWAMessageFromContent(jid, editContent as any, {
+				logger,
+				userJid: authState.creds.me?.id,
+				messageId: generateMessageIDV2(authState.creds.me?.id || jid)
+			})
+			await relayMessage(jid, editMessage.message!, {
+				...relayOptions,
+				messageId: editMessage.key.id
+			})
+		}
+		return fullMsg
+	}
+
+	const sendRichHtml = async (jid: string, content: string | Record<string, any>, options: MiscMessageGenerationOptions = {}) => {
+		const richContent = typeof content === 'string' ? { html: content } : content
+		if (!richContent || typeof richContent !== 'object') {
+			throw new Boom('sendRichHtml requires HTML content or tabs', { statusCode: 400 })
+		}
+		const generated = generateBotHtmlResponse({
+			...richContent,
+			rich: true
+		}, options as any)
+		const waMsg = generateWAMessageFromContent(jid, generated as any, options as any)
+		await relayRichMessage(jid, waMsg, options)
+		return waMsg
+	}
+
         return {
                 ...sock,
                 issuePrivacyTokens,
@@ -1736,6 +1790,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
                         return message
                 },
+                sendRichHtml,
+                sendRichHtmlMessage: sendRichHtml,
                 sendMessage: async (jid: string, content: AnyMessageContent, options: MiscMessageGenerationOptions = {}) => {
                         const userJid = authState.creds.me!.id
                         if (
