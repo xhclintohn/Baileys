@@ -1363,6 +1363,11 @@ const buildRichHtmlScreen = (
 	}
 }
 
+export const BOT_HTML_RENDERING_CONFIG = {
+	bloksVersioningId: '0903aa5f7f47de66789d5f4c86d3bd6e05e4bc3ff85e454a9f907d5ed7fef97c',
+	pixelDensity: 2.75
+}
+
 export const generateBotHtmlResponse = (content: string | RichHtmlContent, options: Record<string, any> = {}) => {
 	const input = typeof content === 'object' && content !== null && !Array.isArray(content)
 		? { ...options, ...content }
@@ -1402,7 +1407,16 @@ export const generateBotHtmlResponse = (content: string | RichHtmlContent, optio
 			sections: [buildRichHtmlSection(htmlPayload, input.trustedSources)]
 		}
 	}
+	const existingBotMetadata = input.messageContextInfo?.botMetadata || {}
 	return {
+		messageContextInfo: {
+			...input.messageContextInfo,
+			botMetadata: {
+				pluginMetadata: {},
+				...existingBotMetadata,
+				botRenderingConfigMetadata: input.botRenderingConfigMetadata || existingBotMetadata.botRenderingConfigMetadata || BOT_HTML_RENDERING_CONFIG
+			}
+		},
 		botForwardedMessage: {
 			message: {
 				richResponseMessage: {
