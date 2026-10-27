@@ -1,5 +1,5 @@
 import { Boom } from '@hapi/boom'
-import { randomBytes } from 'crypto'
+import { randomBytes, randomUUID } from 'crypto'
 import { promises as fs } from 'fs'
 import { type Transform } from 'stream'
 import { proto } from '../../WAProto/index.js'
@@ -1273,4 +1273,146 @@ export const assertMediaContent = (content: proto.IMessage | null | undefined) =
 	}
 
 	return mediaContent
+}
+
+export type RichHtmlTab = {
+	id?: string
+	tab_header?: string
+	title?: string
+	html?: string
+	payload?: string
+	url?: string
+	trustedSources?: string[]
+}
+
+export type RichHtmlContent = {
+	html?: string
+	title?: string
+	tabHeader?: string
+	trustedSources?: string[]
+	tabs?: RichHtmlTab[]
+	url?: string
+	rich?: boolean
+	richHtml?: boolean
+	responseId?: string
+	contextInfo?: any
+	messageContextInfo?: any
+	botRenderingConfigMetadata?: any
+}
+
+const normalizeTrustedSources = (value: unknown): string[] => {
+	if (!Array.isArray(value)) {
+		return []
+	}
+	return value.filter((source): source is string => typeof source === 'string' && !!source.trim()).map(source => source.trim())
+}
+
+const buildRichHtmlSection = (html: string, trustedSources: unknown) => ({
+	__typename: 'GenAIUnifiedResponseSection',
+	view_model: {
+		__typename: 'GenAISingleLayoutViewModel',
+		primitive: {
+			__typename: 'FOAHtmlPrimitiveDemoDONOTUSE',
+			trusted_sources: normalizeTrustedSources(trustedSources),
+			payload: String(html).trim()
+		}
+	}
+})
+
+const buildRichHtmlTabSection = (html: string, trustedSources: unknown, url?: string) => ({
+	__typename: 'GenAIUnifiedResponseSection',
+	view_model: {
+		__typename: 'GenAISingleLayoutViewModel',
+		primitive: {
+			__typename: 'GenAIaeacdsnwHtmlPrimitive',
+			payload: String(html).trim(),
+			url: url || '',
+			trusted_sources: normalizeTrustedSources(trustedSources)
+		}
+	}
+})
+
+const buildRichHtmlScreen = (
+	html: string,
+	tabs: RichHtmlTab[] | undefined,
+	title: string,
+	tabHeader: string | undefined,
+	trustedSources: unknown,
+	url: string | undefined
+) => {
+	const validTabs = (Array.isArray(tabs) ? tabs : []).filter(tab => String(tab?.html ?? tab?.payload ?? '').trim())
+	const tabItems = validTabs.length ? validTabs : [{ id: 'tab_0', tab_header: tabHeader, html }]
+	const embeddedTabs = tabItems.map((tab, index) => {
+		const tabHtml = String(tab?.html ?? tab?.payload ?? html ?? '').trim()
+		return {
+			id: tab?.id || `tab_${index}`,
+			tab_header: tab?.tab_header || tab?.title || `HTML ${index + 1}`,
+			sections: [buildRichHtmlTabSection(tabHtml, tab?.trustedSources || trustedSources, tab?.url || url)],
+			step_entries: []
+		}
+	}).filter(tab => tab.sections[0].view_model.primitive.payload)
+	return {
+		title,
+		embeddedScreen: {
+			title,
+			content: [{
+				__typename: 'FOAIDNixelButtonSheets',
+				tabs: embeddedTabs
+			}]
+		}
+	}
+}
+
+export const generateBotHtmlResponse = (content: string | RichHtmlContent, options: Record<string, any> = {}) => {
+	const input = typeof content === 'object' && content !== null && !Array.isArray(content)
+		? { ...options, ...content }
+		: { ...options, html: content }
+	const htmlPayload = typeof input.html === 'string' ? input.html.trim() : ''
+	const hasTabs = Array.isArray(input.tabs) && input.tabs.some(tab => String(tab?.html ?? tab?.payload ?? '').trim())
+	if (!htmlPayload && !hasTabs) {
+		throw new Boom('bot HTML responses require non-empty HTML content', { statusCode: 400 })
+	}
+	const responseId = input.responseId || randomUUID()
+	const title = String(input.title || 'Preview')
+	const rich = hasTabs || input.rich === true || input.richHtml === true
+	let payload: Record<string, any>
+	let submessages: any[] = []
+	if (rich) {
+		const { embeddedScreen } = buildRichHtmlScreen(htmlPayload, input.tabs, title, input.tabHeader, input.trustedSources, input.url)
+		payload = {
+			__typename: 'GenAIUnifiedResponse',
+			response_id: responseId,
+			sections: [{
+				__typename: 'GenAIUnifiedResponseSection',
+				view_model: {
+					__typename: 'GenAISingleLayoutViewModel',
+					primitive: {
+						__typename: 'GenAIMarkdownTextUXPrimitive',
+						text: `> ${title}`
+					}
+				}
+			}],
+			embedded_screens: [embeddedScreen]
+		}
+		submessages = [{ messageType: 1, messageText: `> ${title}` }]
+	} else {
+		payload = {
+			__typename: 'GenAIUnifiedResponse',
+			response_id: responseId,
+			sections: [buildRichHtmlSection(htmlPayload, input.trustedSources)]
+		}
+	}
+	return {
+		botForwardedMessage: {
+			message: {
+				richResponseMessage: {
+					submessages,
+					messageType: 1,
+					unifiedResponse: {
+						data: Buffer.from(JSON.stringify(payload)).toString('base64')
+					}
+				}
+			}
+		}
+	}
 }
