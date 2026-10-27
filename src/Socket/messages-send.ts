@@ -15,6 +15,7 @@ import type {
 } from '../Types'
 import {
         aggregateMessageKeysNotFromMe,
+        applyBotForwardedWrapper,
         assertMediaContent,
         bindWaitForEvent,
         decryptMediaRetryData,
@@ -653,6 +654,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 const binaryNodeContent: BinaryNode[] = []
                 const devices: DeviceWithJid[] = []
                 let reportingMessage: proto.IMessage | undefined
+
+                message = applyBotForwardedWrapper(message)
 
                 const meMsg: proto.IMessage = {
                         deviceSentMessage: {

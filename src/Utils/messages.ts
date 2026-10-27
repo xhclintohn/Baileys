@@ -1416,3 +1416,24 @@ export const generateBotHtmlResponse = (content: string | RichHtmlContent, optio
 		}
 	}
 }
+
+export const applyBotForwardedWrapper = (message: any) => {
+	if (message?.deviceSentMessage?.message) {
+		message.deviceSentMessage.message = applyBotForwardedWrapper(message.deviceSentMessage.message)
+		return message
+	}
+	const rich = message?.botForwardedMessage?.message?.richResponseMessage || message?.richResponseMessage
+	if (!rich) {
+		return message
+	}
+	rich.contextInfo = {
+		...rich.contextInfo,
+		isForwarded: true,
+		forwardOrigin: 4
+	}
+	return message.botForwardedMessage ? message : {
+		botForwardedMessage: {
+			message
+		}
+	}
+}
