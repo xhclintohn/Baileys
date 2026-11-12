@@ -1368,7 +1368,7 @@ const buildRichHtmlScreen = (
 			sections: [buildRichHtmlTabSection(tabHtml, tab?.trustedSources || trustedSources, tab?.url || url)],
 			step_entries: []
 		}
-	}).filter(tab => tab.sections[0].view_model.primitive.payload)
+	}).filter(tab => tab.sections[0]!.view_model.primitive.payload)
 	return {
 		title,
 		embeddedScreen: {
@@ -1387,7 +1387,7 @@ export const BOT_HTML_RENDERING_CONFIG = {
 }
 
 export const generateBotHtmlResponse = (content: string | RichHtmlContent, options: Record<string, any> = {}) => {
-	const input = typeof content === 'object' && content !== null && !Array.isArray(content)
+	const input: Record<string, any> = typeof content === 'object' && content !== null && !Array.isArray(content)
 		? { ...options, ...content }
 		: { ...options, html: content }
 	const htmlPayload = typeof input.html === 'string' ? input.html.trim() : ''
