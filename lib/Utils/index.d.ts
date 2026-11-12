@@ -1,5 +1,6 @@
 export * from './generics.js';
 export * from './zip.js';
+export * from './rich-response.js';
 export * from './decode-wa-message.js';
 export * from './messages.js';
 export * from './messages-media.js';
