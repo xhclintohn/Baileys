@@ -38,10 +38,7 @@ export declare const makeChatsSocket: (config: SocketConfig) => {
     fetchBlocklist: () => Promise<(string | undefined)[]>;
     fetchStatus: (...jids: string[]) => Promise<import("../WAUSync").USyncQueryResultList[] | undefined>;
     fetchDisappearingDuration: (...jids: string[]) => Promise<import("../WAUSync").USyncQueryResultList[] | undefined>;
-    updateProfilePicture: (jid: string, content: WAMediaUpload, dimensions?: {
-        width: number;
-        height: number;
-    }) => Promise<void>;
+    updateProfilePicture: (jid: string, content: WAMediaUpload, options?: import("../Utils").ProfilePictureOptions) => Promise<void>;
     removeProfilePicture: (jid: string) => Promise<void>;
     updateProfileStatus: (status: string) => Promise<void>;
     updateProfileName: (name: string) => Promise<void>;

@@ -128,10 +128,7 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     fetchBlocklist: () => Promise<(string | undefined)[]>;
     fetchStatus: (...jids: string[]) => Promise<import("../index.js").USyncQueryResultList[] | undefined>;
     fetchDisappearingDuration: (...jids: string[]) => Promise<import("../index.js").USyncQueryResultList[] | undefined>;
-    updateProfilePicture: (jid: string, content: import("../Types").WAMediaUpload, dimensions?: {
-        width: number;
-        height: number;
-    }) => Promise<void>;
+    updateProfilePicture: (jid: string, content: import("../Types").WAMediaUpload, options?: import("../Utils").ProfilePictureOptions) => Promise<void>;
     removeProfilePicture: (jid: string) => Promise<void>;
     updateProfileStatus: (status: string) => Promise<void>;
     updateProfileName: (name: string) => Promise<void>;

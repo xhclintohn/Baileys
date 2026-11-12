@@ -22,10 +22,13 @@ export declare const extractImageThumb: (bufferOrFilePath: Readable | Buffer | s
     };
 }>;
 export declare const encodeBase64EncodedStringForUpload: (b64: string) => string;
-export declare const generateProfilePicture: (mediaUpload: WAMediaUpload, dimensions?: {
-    width: number;
-    height: number;
-}) => Promise<{
+export type ProfilePictureOptions = {
+    width?: number;
+    height?: number;
+    full?: boolean;
+    quality?: number;
+};
+export declare const generateProfilePicture: (mediaUpload: WAMediaUpload, options?: ProfilePictureOptions) => Promise<{
     img: Buffer;
 }>;
 export declare const mediaMessageSHA256B64: (message: WAMessageContent) => any;

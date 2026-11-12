@@ -167,13 +167,15 @@ export const extractImageThumb = async (bufferOrFilePath: Readable | Buffer | st
 export const encodeBase64EncodedStringForUpload = (b64: string) =>
 	encodeURIComponent(b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/\=+$/, ''))
 
-export const generateProfilePicture = async (
-	mediaUpload: WAMediaUpload,
-	dimensions?: { width: number; height: number }
-) => {
-	let buffer: Buffer
+export type ProfilePictureOptions = {
+	width?: number
+	height?: number
+	full?: boolean
+	quality?: number
+}
 
-	const { width: w = 640, height: h = 640 } = dimensions || {}
+export const generateProfilePicture = async (mediaUpload: WAMediaUpload, options?: ProfilePictureOptions) => {
+	let buffer: Buffer
 
 	if (Buffer.isBuffer(mediaUpload)) {
 		buffer = mediaUpload
@@ -181,6 +183,54 @@ export const generateProfilePicture = async (
 		const { stream } = await getStream(mediaUpload)
 		buffer = await toBuffer(stream)
 	}
+
+	if (options?.full) {
+		const MAX_SIDE = 640
+		const quality = options.quality ?? 92
+		const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+		const lib = await getImageProcessingLibrary()
+		if ('sharp' in lib && typeof lib.sharp?.default === 'function') {
+			const meta = await lib.sharp.default(buffer).metadata()
+			const longest = Math.max(meta.width ?? 0, meta.height ?? 0)
+			if (isJpeg && longest <= MAX_SIDE) {
+				return { img: buffer }
+			}
+
+			let pipeline = lib.sharp.default(buffer)
+			if (longest > MAX_SIDE) {
+				pipeline = pipeline.resize(MAX_SIDE, MAX_SIDE, { fit: 'inside' })
+			}
+
+			return { img: await pipeline.jpeg({ quality }).toBuffer() }
+		} else if ('jimp' in lib) {
+			const mod: any = lib.jimp
+			const Jimp = mod?.default ?? mod
+			if (typeof Jimp?.read !== 'function') {
+				throw new Boom('No image processing library available')
+			}
+
+			const image = await Jimp.read(buffer)
+			const longest = Math.max(image.bitmap.width, image.bitmap.height)
+			if (isJpeg && longest <= MAX_SIDE) {
+				return { img: buffer }
+			}
+
+			if (longest > MAX_SIDE) {
+				if (image.bitmap.width >= image.bitmap.height) {
+					image.resize(MAX_SIDE, Jimp.AUTO)
+				} else {
+					image.resize(Jimp.AUTO, MAX_SIDE)
+				}
+			}
+
+			image.quality(quality)
+			return { img: await image.getBufferAsync(Jimp.MIME_JPEG) }
+		} else {
+			throw new Boom('No image processing library available')
+		}
+	}
+
+	const { width: w = 640, height: h = 640 } = options || {}
 
 	const lib = await getImageProcessingLibrary()
 	let img: Promise<Buffer>

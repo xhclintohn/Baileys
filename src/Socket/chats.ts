@@ -40,6 +40,7 @@ import {
 	ensureLTHashStateVersion,
 	extractSyncdPatches,
 	generateProfilePicture,
+	type ProfilePictureOptions,
 	getHistoryMsg,
 	isAppStateSyncIrrecoverable,
 	isMissingKeyError,
@@ -383,11 +384,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		}
 	}
 
-	const updateProfilePicture = async (
-		jid: string,
-		content: WAMediaUpload,
-		dimensions?: { width: number; height: number }
-	) => {
+	const updateProfilePicture = async (jid: string, content: WAMediaUpload, options?: ProfilePictureOptions) => {
 		let targetJid
 		if (!jid) {
 			throw new Boom(
@@ -401,7 +398,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 			targetJid = undefined
 		}
 
-		const { img } = await generateProfilePicture(content, dimensions)
+		const { img } = await generateProfilePicture(content, options)
 		await query({
 			tag: 'iq',
 			attrs: {
