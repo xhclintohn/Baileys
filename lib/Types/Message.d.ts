@@ -142,6 +142,10 @@ export type AnyMediaMessageContent = (({
 } | ({
     sticker: WAMediaUpload;
     isAnimated?: boolean;
+    isAiSticker?: boolean;
+    isAvatar?: boolean;
+    isLottie?: boolean;
+    accessibilityLabel?: string;
 } & WithDimensions) | ({
     document: WAMediaUpload;
     mimetype: string;
