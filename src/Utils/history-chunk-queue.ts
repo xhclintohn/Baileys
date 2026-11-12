@@ -10,7 +10,26 @@ export const HISTORY_CHUNK_STATE = Object.freeze({
 
 export type HistoryChunkState = (typeof HISTORY_CHUNK_STATE)[keyof typeof HISTORY_CHUNK_STATE]
 
-const TERMINAL_STATES = new Set([
+type HistoryChunkRecord = {
+	id: string
+	msgKey: any
+	syncType: any
+	chunkOrder: number
+	progress: any
+	peerDataRequestSessionId: any
+	notification: any
+	state: HistoryChunkState
+	attempts: number
+	updatedAt: number
+	messageTimestamp?: any
+	lastError?: string
+	_decoded?: any
+	_done?: Promise<any>
+	_resolveDone?: (value: any) => void
+	[key: string]: any
+}
+
+const TERMINAL_STATES: Set<HistoryChunkState> = new Set([
     HISTORY_CHUNK_STATE.COMPLETION_RECEIPT_SENT,
     HISTORY_CHUNK_STATE.FAILED
 ]);
@@ -23,22 +42,22 @@ export function makeHistoryChunkQueue(deps: any) {
     const logger = deps.logger || { info() { }, warn() { }, debug() { }, trace() { }, error() { } };
     const maxRetries = deps.maxRetries ?? 3;
     const backoffBaseMs = deps.backoffBaseMs ?? 1000;
-    const setTimer = deps.setTimer || ((fn, ms) => setTimeout(fn, ms));
-    const clearTimer = deps.clearTimer || (id => clearTimeout(id));
+    const setTimer = deps.setTimer || ((fn: () => void, ms: number) => setTimeout(fn, ms));
+    const clearTimer: (id: any) => void = deps.clearTimer || (id => clearTimeout(id));
     const now = deps.now || (() => Date.now());
     const orderedTypes = new Set(deps.orderedSyncTypes ?? []);
-    const records = new Map();
-    const lastAppliedOrder = new Map();
-    const retryTimers = new Map();
+    const records = new Map<string, HistoryChunkRecord>();
+    const lastAppliedOrder = new Map<any, number>();
+    const retryTimers = new Map<string, any>();
     let disposed = false;
-    let initPromise = null;
-    const isOrdered = (syncType) => orderedTypes.has(syncType);
-    const persistPut = async (rec) => {
+    let initPromise: Promise<void> | null = null;
+    const isOrdered = (syncType: any) => orderedTypes.has(syncType);
+    const persistPut = async (rec: HistoryChunkRecord) => {
         if (!persistence?.put) {
             return;
         }
         try {
-            const snapshot = {};
+            const snapshot: Record<string, any> = {};
             for (const k of Object.keys(rec)) {
                 if (k.startsWith('_')) {
                     continue;
@@ -51,7 +70,7 @@ export function makeHistoryChunkQueue(deps: any) {
             logger.warn({ err, id: rec.id }, 'failed to persist history chunk record');
         }
     };
-    const setState = async (rec, state, extra) => {
+    const setState = async (rec: HistoryChunkRecord, state: HistoryChunkState, extra?: Record<string, any>) => {
         rec.state = state;
         rec.updatedAt = now();
         if (extra) {
@@ -101,7 +120,7 @@ export function makeHistoryChunkQueue(deps: any) {
         })();
         return initPromise;
     };
-    const trackApplied = (rec) => {
+    const trackApplied = (rec: HistoryChunkRecord) => {
         if (!isOrdered(rec.syncType)) {
             return;
         }
@@ -110,7 +129,7 @@ export function makeHistoryChunkQueue(deps: any) {
             lastAppliedOrder.set(rec.syncType, rec.chunkOrder);
         }
     };
-    const smallestNonTerminalOrder = (syncType) => {
+    const smallestNonTerminalOrder = (syncType: any) => {
         let min;
         for (const rec of records.values()) {
             if (rec.syncType !== syncType || TERMINAL_STATES.has(rec.state)) {
@@ -123,7 +142,7 @@ export function makeHistoryChunkQueue(deps: any) {
         return min;
     };
     const pickNext = () => {
-        let best = null;
+        let best: HistoryChunkRecord | null = null;
         for (const rec of records.values()) {
             if (TERMINAL_STATES.has(rec.state) || rec.state === HISTORY_CHUNK_STATE.RETRY_PENDING) {
                 continue;
@@ -143,7 +162,7 @@ export function makeHistoryChunkQueue(deps: any) {
         }
         return best;
     };
-    const processOne = async (rec) => {
+    const processOne = async (rec: HistoryChunkRecord) => {
         if (isOrdered(rec.syncType)) {
             const min = smallestNonTerminalOrder(rec.syncType);
             if (min !== undefined && rec.chunkOrder > min) {
@@ -190,7 +209,7 @@ export function makeHistoryChunkQueue(deps: any) {
         }
         catch (err) {
             rec.attempts = (rec.attempts || 0) + 1;
-            rec.lastError = String(err?.message || err);
+            rec.lastError = String((err as { message?: string })?.message || err);
             const stage = rec.state;
             if (rec.attempts >= maxRetries) {
                 await setState(rec, HISTORY_CHUNK_STATE.FAILED);
@@ -203,7 +222,7 @@ export function makeHistoryChunkQueue(deps: any) {
             }
         }
     };
-    const scheduleRetry = (rec) => {
+    const scheduleRetry = (rec: HistoryChunkRecord) => {
         if (disposed) {
             return;
         }
@@ -220,10 +239,10 @@ export function makeHistoryChunkQueue(deps: any) {
         }, delay);
         retryTimers.set(rec.id, timer);
     };
-    let loopPromise = null;
+    let loopPromise: Promise<void> | null = null;
     const runLoop = async () => {
         await init();
-        let rec;
+        let rec: HistoryChunkRecord | null | undefined;
         while (!disposed && (rec = pickNext())) {
             const before = rec.state;
             await processOne(rec);
@@ -237,7 +256,7 @@ export function makeHistoryChunkQueue(deps: any) {
             return undefined;
         }
         if (!loopPromise) {
-            loopPromise = new Promise(resolve => {
+            loopPromise = new Promise<void>(resolve => {
                 setTimer(() => {
                     runLoop()
                         .catch(err => { logger.error({ err }, 'history chunk queue loop error'); })
@@ -249,7 +268,7 @@ export function makeHistoryChunkQueue(deps: any) {
     };
     return {
         HISTORY_CHUNK_STATE,
-        async enqueue(notification, msgKey, extra = {}) {
+        async enqueue(notification: any, msgKey: any, extra: Record<string, any> = {}) {
             if (disposed) {
                 return;
             }
@@ -267,7 +286,7 @@ export function makeHistoryChunkQueue(deps: any) {
                 }
                 return existing._done || Promise.resolve();
             }
-            const rec = {
+            const rec: HistoryChunkRecord = {
                 id,
                 msgKey,
                 syncType: notification?.syncType,
@@ -286,13 +305,13 @@ export function makeHistoryChunkQueue(deps: any) {
             kick();
             return rec._done;
         },
-        getRecord(id) {
+        getRecord(id: string) {
             return records.get(id);
         },
         get size() {
             return records.size;
         },
-        lastAppliedOrderFor(syncType) {
+        lastAppliedOrderFor(syncType: any) {
             return lastAppliedOrder.get(syncType);
         },
         async drain() {
