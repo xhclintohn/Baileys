@@ -73,6 +73,14 @@ This update pulls in a batch of fixes and improvements from upstream Baileys and
 <details>
 <summary>🆕 Click to see everything in this update</summary>
 
+**New in 1.7.0:**
+- **Channel statuses finally work both ways.** Channel admins can post a 24h status with `sendChannelStatus`, and statuses posted by channels you follow now show up as a `newsletter.status` event instead of being invisible. Regular status acks are untouched.
+- **Payment messages.** `requestPayment`, `sendPayment`, `declinePaymentRequest`, `cancelPaymentRequest`, and `sendPaymentInvite` send WhatsApp payment cards. This only sends the message — actually moving money still needs a payment provider.
+- **Sticker packs.** `sendStickerPack` sends a whole pack (up to 60 stickers plus a tray icon) in one message that the receiver can add to their collection.
+- **Full-image profile pictures.** Pass `{ full: true }` to `updateProfilePicture` and the photo goes up as-is — no crop, no padding, nothing cut off. Without it, the usual 640x640 crop still applies.
+- **Better delete and clear chat.** `deleteMessage` deletes for everyone, `deleteMessageForMe` deletes one message just for you, and `clearChat` can now keep starred messages with `{ deleteStarred: false }`. Clearing a chat on another device now shows up as an update here too.
+- **Article cards, premium sticker flags, and more.** `sendArticleCard` for link-preview cards, `isAiSticker` / `isAvatar` / `isLottie` flags on stickers, a Markdown-table-to-rich-response helper, peer messages with app-state key requests, runtime patching of username query IDs, and LID lookups right on the socket (`getPNForLID` and friends) — plus a fix so LID lookups stop returning phone numbers with a stray `:0` on the end.
+
 **New in 1.6.0:**
 - **Pairing codes work again — and fail loudly when they should.** The pairing key derivation now matches WhatsApp's protocol (PBKDF2), fixing codes that were always rejected while QR worked. On top of that, pairing requests wait for the server's readiness stanza, surface real server errors instead of dying silently, and can't be double-fired.
 - **Retries actually recover sessions now.** When a contact asks for a resend, the session bundle inside their retry receipt is used to rebuild the session, stale sessions are detected via registration-id/base-key checks, and group resends carry the sender-key distribution so people can actually decrypt.
