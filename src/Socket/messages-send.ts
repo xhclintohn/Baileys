@@ -10,6 +10,7 @@ import type {
         MessageRelayOptions,
         MiscMessageGenerationOptions,
         PaymentInviteOptions,
+        StickerPack,
         RequestPaymentOptions,
         SendPaymentOptions,
         SocketConfig,
@@ -84,6 +85,7 @@ import {
 	sendPayment,
 	sendPaymentInvite
 } from './payment.js'
+import { sendStickerPack } from './stickerPack.js'
 import { makeUsernameSocket } from './username'
 import { ToxicHandler } from './groupStatus.js'
 
@@ -1729,6 +1731,13 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		return waMsg
 	}
 
+	const stickerPackDeps = {
+		relayMessage,
+		upload: waUploadToServer,
+		userJid: authState.creds.me?.id,
+		logger
+	}
+
 	const paymentDeps = {
 		relayMessage,
 		userJid: authState.creds.me?.id,
@@ -1797,6 +1806,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 cancelPaymentRequest: (jid: string, key: WAMessageKey) => cancelPaymentRequest(jid, key, paymentDeps),
                 sendPaymentInvite: (jid: string, options: PaymentInviteOptions = {}) =>
                         sendPaymentInvite(jid, options, paymentDeps),
+                sendStickerPack: (jid: string, pack: StickerPack) => sendStickerPack(jid, pack, stickerPackDeps),
                 sendChannelStatus: (jid: string, content: AnyMessageContent, options: ChannelStatusOptions = {}) =>
                         sendChannelStatus(
                                 jid,

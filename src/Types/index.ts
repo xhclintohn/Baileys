@@ -12,6 +12,7 @@ export * from './Signal'
 export * from './Newsletter'
 export * from './ChannelStatus'
 export * from './Payment'
+export * from './StickerPack'
 export * from './Mex'
 
 import type { AuthenticationState } from './Auth'

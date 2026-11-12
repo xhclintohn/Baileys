@@ -1,4 +1,5 @@
 export * from './generics'
+export * from './zip'
 export * from './decode-wa-message'
 export * from './messages'
 export * from './messages-media'

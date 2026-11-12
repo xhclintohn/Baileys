@@ -42,6 +42,7 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     declinePaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
     cancelPaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
     sendPaymentInvite: (jid: string, options?: import("../Types").PaymentInviteOptions) => Promise<import("../Types").PaymentResult>;
+    sendStickerPack: (jid: string, pack: import("../Types").StickerPack) => Promise<import("../Types").StickerPackResult>;
     sendChannelStatus: (jid: string, content: import("../Types").AnyMessageContent, options?: import("./channelStatus.js").ChannelStatusOptions) => Promise<import("./channelStatus.js").ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: import("../Types").AnyMessageContent, options?: import("../Types").MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;
