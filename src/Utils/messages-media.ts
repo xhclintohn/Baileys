@@ -146,14 +146,14 @@ export const extractImageThumb = async (bufferOrFilePath: Readable | Buffer | st
 				height: dimensions.height
 			}
 		}
-	} else if ('jimp' in lib && typeof lib.jimp?.Jimp === 'object') {
-		const jimp = await (lib.jimp.Jimp as any).read(bufferOrFilePath)
+	} else if ('jimp' in lib && typeof (lib.jimp as any)?.Jimp === 'object') {
+		const jimp = await (lib.jimp as any).Jimp.read(bufferOrFilePath)
 		const dimensions = {
 			width: jimp.width,
 			height: jimp.height
 		}
 		const buffer = await jimp
-			.resize({ w: width, mode: lib.jimp.ResizeStrategy.BILINEAR })
+			.resize({ w: width, mode: (lib.jimp as any).ResizeStrategy.BILINEAR })
 			.getBuffer('image/jpeg', { quality: 50 })
 		return {
 			buffer,
@@ -242,14 +242,14 @@ export const generateProfilePicture = async (mediaUpload: WAMediaUpload, options
 				quality: 50
 			})
 			.toBuffer()
-	} else if ('jimp' in lib && typeof lib.jimp?.Jimp === 'function') {
-		const jimp = await (lib.jimp.Jimp as any).read(buffer)
+	} else if ('jimp' in lib && typeof (lib.jimp as any)?.Jimp === 'function') {
+		const jimp = await (lib.jimp as any).Jimp.read(buffer)
 		const min = Math.min(jimp.width, jimp.height)
 		const x = Math.floor((jimp.width - min) / 2)
 		const y = Math.floor((jimp.height - min) / 2)
 		const cropped = jimp.crop({ x, y, w: min, h: min })
 
-		img = cropped.resize({ w, h, mode: lib.jimp.ResizeStrategy.BILINEAR }).getBuffer('image/jpeg', { quality: 50 })
+		img = cropped.resize({ w, h, mode: (lib.jimp as any).ResizeStrategy.BILINEAR }).getBuffer('image/jpeg', { quality: 50 })
 	} else {
 		throw new Boom('No image processing library available')
 	}
@@ -273,9 +273,9 @@ export async function getAudioDuration(buffer: Buffer | string | Readable) {
 	if (Buffer.isBuffer(buffer)) {
 		metadata = await musicMetadata.parseBuffer(buffer, undefined, options)
 	} else if (typeof buffer === 'string') {
-		metadata = await musicMetadata.parseFile(buffer, options)
+		metadata = await (musicMetadata as any).parseFile(buffer, options)
 	} else {
-		metadata = await musicMetadata.parseStream(buffer, undefined, options)
+		metadata = await (musicMetadata as any).parseStream(buffer, undefined, options)
 	}
 
 	return metadata.format.duration
