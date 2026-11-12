@@ -79,6 +79,10 @@ export type SignalDataTypeMap = {
         senderTimestamp?: number;
     };
     'identity-key': Uint8Array;
+    'history-chunk': {
+        ids?: string[];
+        [key: string]: unknown;
+    };
 };
 export type SignalDataSet = {
     [T in keyof SignalDataTypeMap]?: {
