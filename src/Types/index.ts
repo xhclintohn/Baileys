@@ -15,6 +15,8 @@ export * from './Payment'
 export * from './StickerPack'
 export * from './Mex'
 
+export type { NewsletterCreateResponse, NewsletterMetadata, NewsletterUpdate, NewsletterViewRole } from './Newsletter'
+
 import type { AuthenticationState } from './Auth'
 import type { SocketConfig } from './Socket'
 

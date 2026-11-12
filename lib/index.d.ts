@@ -6,6 +6,7 @@ export * from './Defaults/index.js';
 export * from './WABinary/index.js';
 export * from './WAM/index.js';
 export * from './WAUSync/index.js';
+export type { MessageType } from './Types/index.js';
 export { ToxicHandler } from './Socket/groupStatus.js';
 export type { ToxicMessageType, ToxicSendContent } from './Socket/groupStatus.js';
 export type WASocket = ReturnType<typeof makeWASocket>;
