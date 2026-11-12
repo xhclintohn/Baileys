@@ -1818,7 +1818,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                 {
                                         relayMessage,
                                         waUploadToServer,
-                                        userJid: authState.creds.me?.id
+                                        userJid: authState.creds.me?.id,
+                                        userLid: authState.creds.me?.lid
                                 },
                                 options
                         ),
