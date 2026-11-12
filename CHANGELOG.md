@@ -1,3 +1,8 @@
+# 1.7.1 (2026-11-12)
+
+### Fixes
+- **All 91 pre-existing TypeScript errors fixed** — `tsc -P tsconfig.build.json --noEmit` now reports 0 errors. Every fix is type-level only (missing type exports, annotations, and casts matching what the code already does at runtime): the compiled `lib/*.js` output is unchanged, and only the matching `lib/*.d.ts` declarations were updated. One latent error the fixes unmasked (a `logger` option the generator already reads) is fixed too.
+
 # 1.7.0 (2026-11-12)
 
 ### Features
