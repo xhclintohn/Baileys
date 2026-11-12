@@ -5,7 +5,7 @@ import { MessageRetryManager } from '../Utils/index.js';
 import { type BinaryNode, type JidWithDevice } from '../WABinary/index.js';
 import { USyncQuery } from '../WAUSync/index.js';
 import type { ChannelStatusOptions, ChannelStatusSent } from './channelStatus.js';
-import { ToxicHandler } from './groupStatus.js';
+import { ToxicHandler, type GroupStatusOptions } from './groupStatus.js';
 export declare const makeMessagesSocket: (config: SocketConfig) => {
     issuePrivacyTokens: (jids: string[], timestamp?: number) => Promise<any>;
     assertSessions: (jids: string[], force?: boolean) => Promise<boolean>;
@@ -32,6 +32,7 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     updateMemberLabel: (jid: string, memberLabel: string) => Promise<string>;
     toxicHandler: ToxicHandler;
     sendStatusMention: (content: Record<string, any>, jids?: string[]) => Promise<WAMessage>;
+    sendGroupStatus: (jid: string, content: AnyMessageContent, options?: GroupStatusOptions) => Promise<WAMessage>;
     getPNForLID: (lid: string) => Promise<string | null>;
     getPNsForLIDs: (lids: string[]) => Promise<import("../Types").LIDMapping[] | null>;
     getLIDForPN: (pn: string) => Promise<string | null>;
