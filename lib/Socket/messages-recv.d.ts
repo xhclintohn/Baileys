@@ -4,6 +4,7 @@ import { proto } from '../../WAProto/index.js';
 import type { MessageReceiptType, MessageRelayOptions, SocketConfig, WAMessage, WAMessageKey } from '../Types/index.js';
 import { type BinaryNode } from '../WABinary/index.js';
 export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
+    sendArticleCard: (jid: string, card: import("../Types").ArticleCardOptions) => Promise<string | WAMessage | undefined>;
     sendMessageAck: (node: BinaryNode, errorCode?: number) => Promise<void>;
     sendRetryRequest: (node: BinaryNode, forceIncludeKeys?: boolean) => Promise<void>;
     rejectCall: (callId: string, callFrom: string) => Promise<void>;

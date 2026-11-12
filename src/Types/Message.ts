@@ -149,6 +149,18 @@ export type EventMessageOptions = {
         messageSecret?: Uint8Array<ArrayBufferLike>
 }
 
+export type ArticleCardOptions = {
+        text?: string
+        title: string
+        body?: string
+        url: string
+        thumbnailUrl?: string
+        mediaType?: proto.ContextInfo.ExternalAdReplyInfo.MediaType
+        containsAutoReply?: boolean
+        renderLargerThumbnail?: boolean
+        showAdAttribution?: boolean
+}
+
 export type AlbumMessageOptions = {
         expectedImageCount?: number
         expectedVideoCount?: number
