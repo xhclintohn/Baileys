@@ -8,6 +8,7 @@ import type { GroupMetadata, GroupParticipant, ParticipantAction, RequestJoinAct
 import type { Label } from './Label.js';
 import type { LabelAssociation } from './LabelAssociation.js';
 import type { MessageUpsertType, MessageUserReceiptUpdate, WAMessage, WAMessageKey, WAMessageUpdate } from './Message.js';
+import type { ChannelStatus } from './ChannelStatus.js';
 import type { ConnectionState } from './State.js';
 export type BaileysEventMap = {
     'connection.update': Partial<ConnectionState>;
@@ -130,6 +131,7 @@ export type BaileysEventMap = {
         id: string;
         update: any;
     };
+    'newsletter.status': ChannelStatus;
     'chats.lock': {
         id: string;
         locked: boolean;

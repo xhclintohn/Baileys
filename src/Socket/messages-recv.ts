@@ -85,6 +85,7 @@ import {
         type JidWithDevice,
         S_WHATSAPP_NET
 } from '../WABinary'
+import { decodeChannelStatus } from './channelStatus'
 import { extractGroupMetadata } from './groups'
 import { makeMessagesSocket } from './messages-send'
 
@@ -2002,6 +2003,14 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
         // instead of <message from="status@broadcast">. It isn't decoded here, but it
         // must be acked: the server ends the stream about 50 minutes later otherwise.
         ws.on('CB:status', (node: BinaryNode) => {
+                const status = decodeChannelStatus(node)
+                if (status) {
+                        ev.buffer()
+                        ev.emit('newsletter.status', status)
+                        ev.flush()
+                        return
+                }
+
                 sendMessageAck(node).catch(error => onUnexpectedError(error, 'acking status'))
         })
 

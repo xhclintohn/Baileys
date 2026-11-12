@@ -73,6 +73,7 @@ import {
         S_WHATSAPP_NET
 } from '../WABinary'
 import { USyncQuery, USyncUser } from '../WAUSync'
+import { type ChannelStatusOptions, sendChannelStatus } from './channelStatus.js'
 import { makeUsernameSocket } from './username'
 import { ToxicHandler } from './groupStatus.js'
 
@@ -1743,6 +1744,17 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 sendGroupStatus: async (content: Record<string, any>, jids: string[] = []) => {
                         return toxicHandler.sendStatusWhatsApp(content, jids)
                 },
+                sendChannelStatus: (jid: string, content: AnyMessageContent, options: ChannelStatusOptions = {}) =>
+                        sendChannelStatus(
+                                jid,
+                                content,
+                                {
+                                        sendNode,
+                                        waUploadToServer,
+                                        userJid: authState.creds.me?.id
+                                },
+                                options
+                        ),
                 updateMediaMessage: async (message: WAMessage) => {
                         const content = assertMediaContent(message.message)
                         const mediaKey = content.mediaKey!

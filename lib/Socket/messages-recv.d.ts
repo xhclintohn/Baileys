@@ -32,6 +32,7 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     updateMemberLabel: (jid: string, memberLabel: string) => Promise<string>;
     toxicHandler: import("./groupStatus.js").ToxicHandler;
     sendStatusMention: (content: Record<string, any>, jids?: string[]) => Promise<WAMessage>;
+    sendChannelStatus: (jid: string, content: import("../Types").AnyMessageContent, options?: import("./channelStatus.js").ChannelStatusOptions) => Promise<import("./channelStatus.js").ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: import("../Types").AnyMessageContent, options?: import("../Types").MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;
     newsletterCreate: (name: string, description?: string) => Promise<import("../Types").NewsletterMetadata>;

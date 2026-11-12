@@ -4,6 +4,7 @@ import type { AnyMessageContent, MediaConnInfo, MessageReceiptType, MessageRelay
 import { MessageRetryManager } from '../Utils/index.js';
 import { type BinaryNode, type JidWithDevice } from '../WABinary/index.js';
 import { USyncQuery } from '../WAUSync/index.js';
+import type { ChannelStatusOptions, ChannelStatusSent } from './channelStatus.js';
 import { ToxicHandler } from './groupStatus.js';
 export declare const makeMessagesSocket: (config: SocketConfig) => {
     issuePrivacyTokens: (jids: string[], timestamp?: number) => Promise<any>;
@@ -29,6 +30,7 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     updateMemberLabel: (jid: string, memberLabel: string) => Promise<string>;
     toxicHandler: ToxicHandler;
     sendStatusMention: (content: Record<string, any>, jids?: string[]) => Promise<WAMessage>;
+    sendChannelStatus: (jid: string, content: AnyMessageContent, options?: ChannelStatusOptions) => Promise<ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;
     newsletterCreate: (name: string, description?: string) => Promise<import("../Types").NewsletterMetadata>;
