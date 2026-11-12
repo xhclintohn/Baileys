@@ -73,6 +73,9 @@ This update pulls in a batch of fixes and improvements from upstream Baileys and
 <details>
 <summary>🆕 Click to see everything in this update</summary>
 
+**New in 1.8.0:**
+- **Group statuses actually post now.** `sendGroupStatus` uses the real group-status message format, so the status shows up inside the group instead of vanishing. Heads up: the call shape changed to `sendGroupStatus(jid, content)` — the old `(content, jids)` shape no longer works. `sendStatusMention` is untouched.
+
 **New in 1.7.1:**
 - **Zero TypeScript errors.** All 91 pre-existing type errors are fixed, so the build typecheck now passes clean. Nothing runs differently — the fixes are types only, and the compiled JavaScript is byte-for-byte the same as 1.7.0.
 
