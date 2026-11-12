@@ -11,6 +11,7 @@ import {
         STATUS_EXPIRY_SECONDS
 } from '../Defaults'
 import type {
+        CacheStore,
         GroupParticipant,
         MessageReceiptType,
         ArticleCardOptions,
@@ -120,7 +121,7 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                 userDevicesCache,
                 devicesMutex,
                 offlineResume
-        } = sock
+        } = sock as typeof sock & { placeholderResendCache: CacheStore }
 
         const getLIDForPN = signalRepository.lidMapping.getLIDForPN.bind(signalRepository.lidMapping)
 
@@ -221,9 +222,9 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                 time_enforcement_ends?: string
         }
 
-        const ENFORCEMENT_TYPE_VALUES = new Set<string>(Object.values(ReachoutTimelockEnforcementType))
+        const ENFORCEMENT_TYPE_VALUES = new Set(Object.values(ReachoutTimelockEnforcementType))
 
-        function isValidEnforcementType(value: string | undefined): value is ReachoutTimelockEnforcementType {
+        function isValidEnforcementType(value: string | undefined): value is string {
                 return typeof value === 'string' && ENFORCEMENT_TYPE_VALUES.has(value)
         }
 
