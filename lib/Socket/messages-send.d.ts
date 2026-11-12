@@ -30,6 +30,10 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     updateMemberLabel: (jid: string, memberLabel: string) => Promise<string>;
     toxicHandler: ToxicHandler;
     sendStatusMention: (content: Record<string, any>, jids?: string[]) => Promise<WAMessage>;
+    getPNForLID: (lid: string) => Promise<string | null>;
+    getPNsForLIDs: (lids: string[]) => Promise<import("../Types").LIDMapping[] | null>;
+    getLIDForPN: (pn: string) => Promise<string | null>;
+    getLIDsForPNs: (pns: string[]) => Promise<import("../Types").LIDMapping[] | null>;
     sendChannelStatus: (jid: string, content: AnyMessageContent, options?: ChannelStatusOptions) => Promise<ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;

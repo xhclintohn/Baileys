@@ -1744,6 +1744,10 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 sendGroupStatus: async (content: Record<string, any>, jids: string[] = []) => {
                         return toxicHandler.sendStatusWhatsApp(content, jids)
                 },
+                getPNForLID: (lid: string) => signalRepository.lidMapping.getPNForLID(lid),
+                getPNsForLIDs: (lids: string[]) => signalRepository.lidMapping.getPNsForLIDs(lids),
+                getLIDForPN: (pn: string) => signalRepository.lidMapping.getLIDForPN(pn),
+                getLIDsForPNs: (pns: string[]) => signalRepository.lidMapping.getLIDsForPNs(pns),
                 sendChannelStatus: (jid: string, content: AnyMessageContent, options: ChannelStatusOptions = {}) =>
                         sendChannelStatus(
                                 jid,
