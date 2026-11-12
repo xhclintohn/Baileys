@@ -73,6 +73,9 @@ This update pulls in a batch of fixes and improvements from upstream Baileys and
 <details>
 <summary>🆕 Click to see everything in this update</summary>
 
+**New in 1.7.1:**
+- **Zero TypeScript errors.** All 91 pre-existing type errors are fixed, so the build typecheck now passes clean. Nothing runs differently — the fixes are types only, and the compiled JavaScript is byte-for-byte the same as 1.7.0.
+
 **New in 1.7.0:**
 - **Channel statuses finally work both ways.** Channel admins can post a 24h status with `sendChannelStatus`, and statuses posted by channels you follow now show up as a `newsletter.status` event instead of being invisible. Regular status acks are untouched.
 - **Payment messages.** `requestPayment`, `sendPayment`, `declinePaymentRequest`, `cancelPaymentRequest`, and `sendPaymentInvite` send WhatsApp payment cards. This only sends the message — actually moving money still needs a payment provider.
