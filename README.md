@@ -73,6 +73,9 @@ This update pulls in a batch of fixes and improvements from upstream Baileys and
 <details>
 <summary>🆕 Click to see everything in this update</summary>
 
+**New in 1.8.1:**
+- **Media group statuses show up like official ones.** Image, video, audio and sticker statuses posted with `sendGroupStatus` now carry the same status info the official app sends (author attribution, poster id, media-key info), so clients display them the same way. Text statuses are unchanged.
+
 **New in 1.8.0:**
 - **Group statuses actually post now.** `sendGroupStatus` uses the real group-status message format, so the status shows up inside the group instead of vanishing. Heads up: the call shape changed to `sendGroupStatus(jid, content)` — the old `(content, jids)` shape no longer works. `sendStatusMention` is untouched.
 
