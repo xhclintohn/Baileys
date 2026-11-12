@@ -87,7 +87,7 @@ import {
 } from './payment.js'
 import { sendStickerPack } from './stickerPack.js'
 import { makeUsernameSocket } from './username'
-import { ToxicHandler } from './groupStatus.js'
+import { ToxicHandler, type GroupStatusOptions, sendGroupStatus } from './groupStatus.js'
 
 export const makeMessagesSocket = (config: SocketConfig) => {
         const {
@@ -1811,9 +1811,17 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 sendStatusMention: async (content: Record<string, any>, jids: string[] = []) => {
                         return toxicHandler.sendStatusWhatsApp(content, jids)
                 },
-                sendGroupStatus: async (content: Record<string, any>, jids: string[] = []) => {
-                        return toxicHandler.sendStatusWhatsApp(content, jids)
-                },
+                sendGroupStatus: (jid: string, content: AnyMessageContent, options: GroupStatusOptions = {}) =>
+                        sendGroupStatus(
+                                jid,
+                                content,
+                                {
+                                        relayMessage,
+                                        waUploadToServer,
+                                        userJid: authState.creds.me?.id
+                                },
+                                options
+                        ),
                 getPNForLID: (lid: string) => signalRepository.lidMapping.getPNForLID(lid),
                 getPNsForLIDs: (lids: string[]) => signalRepository.lidMapping.getPNsForLIDs(lids),
                 getLIDForPN: (pn: string) => signalRepository.lidMapping.getLIDForPN(pn),
