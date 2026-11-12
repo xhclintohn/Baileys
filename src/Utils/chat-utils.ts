@@ -616,7 +616,7 @@ export const chatModificationToAppPatch = (mod: ChatModification, jid: string) =
 					messageRange: getMessageRange(mod.lastMessages)
 				}
 			},
-			index: ['clearChat', jid, '1' /*the option here is 0 when keep starred messages is enabled*/, '0'],
+			index: ['clearChat', jid, mod.deleteStarred === false ? '0' : '1', '0'],
 			type: 'regular_high',
 			apiVersion: 6,
 			operation: OP.SET
@@ -883,6 +883,16 @@ export const processSyncAction = (
 	} else if (action?.deleteChatAction || type === 'deleteChat') {
 		if (!isInitialSync) {
 			ev.emit('chats.delete', [id!])
+		}
+	} else if (action?.clearChatAction || type === 'clearChat') {
+		if (!isInitialSync) {
+			ev.emit('chats.update', [
+				{
+					id,
+					messages: [],
+					conditional: getChatUpdateConditional(id!, action?.clearChatAction?.messageRange)
+				}
+			])
 		}
 	} else if (action?.labelEditAction) {
 		const { name, color, deleted, predefinedId } = action.labelEditAction

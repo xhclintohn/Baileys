@@ -1719,6 +1719,32 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		return waMsg
 	}
 
+	const deleteMessage = async (jid: string, key: WAMessageKey) => {
+		const fullMsg = await generateWAMessage(
+			jid,
+			{ delete: key },
+			{
+				logger,
+				userJid: authState.creds.me!.id,
+				upload: waUploadToServer,
+				messageId: generateMessageIDV2(sock.user?.id)
+			}
+		)
+		await relayMessage(jid, fullMsg.message!, {
+			messageId: fullMsg.key.id!,
+			additionalAttributes: {
+				edit: isJidGroup(key.remoteJid as string) && !key.fromMe ? '8' : '7'
+			}
+		})
+		if (config.emitOwnEvents) {
+			process.nextTick(async () => {
+				await messageMutex.mutex(() => upsertMessage(fullMsg, 'append'))
+			})
+		}
+
+		return fullMsg
+	}
+
         return {
                 ...sock,
                 issuePrivacyTokens,
@@ -1748,6 +1774,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 getPNsForLIDs: (lids: string[]) => signalRepository.lidMapping.getPNsForLIDs(lids),
                 getLIDForPN: (pn: string) => signalRepository.lidMapping.getLIDForPN(pn),
                 getLIDsForPNs: (pns: string[]) => signalRepository.lidMapping.getLIDsForPNs(pns),
+                deleteMessage,
                 sendChannelStatus: (jid: string, content: AnyMessageContent, options: ChannelStatusOptions = {}) =>
                         sendChannelStatus(
                                 jid,

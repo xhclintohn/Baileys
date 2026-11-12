@@ -59,6 +59,10 @@ export declare const makeChatsSocket: (config: SocketConfig) => {
     getBusinessProfile: (jid: string) => Promise<WABusinessProfile | void>;
     resyncAppState: (collections: readonly ("critical_unblock_low" | "regular_high" | "regular_low" | "critical_block" | "regular")[], isInitialSync: boolean) => Promise<void>;
     chatModify: (mod: ChatModification, jid: string) => Promise<void>;
+    clearChat: (jid: string, lastMessages: any[], options?: {
+        deleteStarred?: boolean;
+    }) => Promise<void>;
+    deleteMessageForMe: (jid: string, key: import("../Types").WAMessageKey, timestamp: number, deleteMedia?: boolean) => Promise<void>;
     cleanDirtyBits: (type: "account_sync" | "groups", fromTimestamp?: number | string) => Promise<void>;
     addOrEditContact: (jid: string, contact: proto.SyncActionValue.IContactAction) => Promise<void>;
     removeContact: (jid: string) => Promise<void>;

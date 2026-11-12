@@ -36,6 +36,7 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     getPNsForLIDs: (lids: string[]) => Promise<import("../Types").LIDMapping[] | null>;
     getLIDForPN: (pn: string) => Promise<string | null>;
     getLIDsForPNs: (pns: string[]) => Promise<import("../Types").LIDMapping[] | null>;
+    deleteMessage: (jid: string, key: WAMessageKey) => Promise<WAMessage>;
     sendChannelStatus: (jid: string, content: import("../Types").AnyMessageContent, options?: import("./channelStatus.js").ChannelStatusOptions) => Promise<import("./channelStatus.js").ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: import("../Types").AnyMessageContent, options?: import("../Types").MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;
@@ -142,6 +143,10 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     getBusinessProfile: (jid: string) => Promise<import("../Types").WABusinessProfile | void>;
     resyncAppState: (collections: readonly ("critical_unblock_low" | "regular_high" | "regular_low" | "critical_block" | "regular")[], isInitialSync: boolean) => Promise<void>;
     chatModify: (mod: import("../Types").ChatModification, jid: string) => Promise<void>;
+    clearChat: (jid: string, lastMessages: any[], options?: {
+        deleteStarred?: boolean;
+    }) => Promise<void>;
+    deleteMessageForMe: (jid: string, key: WAMessageKey, timestamp: number, deleteMedia?: boolean) => Promise<void>;
     cleanDirtyBits: (type: "account_sync" | "groups", fromTimestamp?: number | string) => Promise<void>;
     addOrEditContact: (jid: string, contact: proto.SyncActionValue.IContactAction) => Promise<void>;
     removeContact: (jid: string) => Promise<void>;

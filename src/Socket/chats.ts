@@ -15,6 +15,7 @@ import type {
 	WABusinessProfile,
 	WAMediaUpload,
 	WAMessage,
+	WAMessageKey,
 	WAPatchCreate,
 	WAPatchName,
 	WAPresence,
@@ -1219,8 +1220,12 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		return chatModify({ archive, lastMessages }, jid)
 	}
 
-	const clearChat = (jid: string, lastMessages: any[]) => {
-		return chatModify({ clear: true, lastMessages }, jid)
+	const clearChat = (jid: string, lastMessages: any[], options?: { deleteStarred?: boolean }) => {
+		return chatModify({ clear: true, lastMessages, deleteStarred: options?.deleteStarred }, jid)
+	}
+
+	const deleteMessageForMe = (jid: string, key: WAMessageKey, timestamp: number, deleteMedia = false) => {
+		return chatModify({ deleteForMe: { deleteMedia, key, timestamp } }, jid)
 	}
 
 	const deleteChat = (jid: string, lastMessages: any[]) => {
@@ -1542,6 +1547,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		chatModify,
 		archiveChat,
 		clearChat,
+		deleteMessageForMe,
 		deleteChat,
 		pinChat,
 		muteChat,

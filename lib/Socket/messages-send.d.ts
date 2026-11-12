@@ -34,6 +34,7 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     getPNsForLIDs: (lids: string[]) => Promise<import("../Types").LIDMapping[] | null>;
     getLIDForPN: (pn: string) => Promise<string | null>;
     getLIDsForPNs: (pns: string[]) => Promise<import("../Types").LIDMapping[] | null>;
+    deleteMessage: (jid: string, key: WAMessageKey) => Promise<WAMessage>;
     sendChannelStatus: (jid: string, content: AnyMessageContent, options?: ChannelStatusOptions) => Promise<ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;
