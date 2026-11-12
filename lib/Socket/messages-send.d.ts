@@ -1,6 +1,6 @@
 import { Boom } from '@hapi/boom';
 import { proto } from '../../WAProto/index.js';
-import type { AnyMessageContent, MediaConnInfo, MessageReceiptType, MessageRelayOptions, MiscMessageGenerationOptions, SocketConfig, WAMessage, WAMessageKey } from '../Types/index.js';
+import type { AnyMessageContent, MediaConnInfo, MessageReceiptType, MessageRelayOptions, MiscMessageGenerationOptions, PaymentInviteOptions, RequestPaymentOptions, SendPaymentOptions, SocketConfig, WAMessage, WAMessageKey } from '../Types/index.js';
 import { MessageRetryManager } from '../Utils/index.js';
 import { type BinaryNode, type JidWithDevice } from '../WABinary/index.js';
 import { USyncQuery } from '../WAUSync/index.js';
@@ -35,6 +35,11 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     getLIDForPN: (pn: string) => Promise<string | null>;
     getLIDsForPNs: (pns: string[]) => Promise<import("../Types").LIDMapping[] | null>;
     deleteMessage: (jid: string, key: WAMessageKey) => Promise<WAMessage>;
+    requestPayment: (jid: string, options: RequestPaymentOptions) => Promise<import("../Types").PaymentResult>;
+    sendPayment: (jid: string, options: SendPaymentOptions) => Promise<import("../Types").PaymentResult>;
+    declinePaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
+    cancelPaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
+    sendPaymentInvite: (jid: string, options?: PaymentInviteOptions) => Promise<import("../Types").PaymentResult>;
     sendChannelStatus: (jid: string, content: AnyMessageContent, options?: ChannelStatusOptions) => Promise<ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;

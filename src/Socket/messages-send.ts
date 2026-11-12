@@ -9,6 +9,9 @@ import type {
         MessageReceiptType,
         MessageRelayOptions,
         MiscMessageGenerationOptions,
+        PaymentInviteOptions,
+        RequestPaymentOptions,
+        SendPaymentOptions,
         SocketConfig,
         WAMessage,
         WAMessageKey
@@ -74,6 +77,13 @@ import {
 } from '../WABinary'
 import { USyncQuery, USyncUser } from '../WAUSync'
 import { type ChannelStatusOptions, sendChannelStatus } from './channelStatus.js'
+import {
+	cancelPaymentRequest,
+	declinePaymentRequest,
+	requestPayment,
+	sendPayment,
+	sendPaymentInvite
+} from './payment.js'
 import { makeUsernameSocket } from './username'
 import { ToxicHandler } from './groupStatus.js'
 
@@ -1719,6 +1729,12 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		return waMsg
 	}
 
+	const paymentDeps = {
+		relayMessage,
+		userJid: authState.creds.me?.id,
+		meJid: authState.creds.me?.id
+	}
+
 	const deleteMessage = async (jid: string, key: WAMessageKey) => {
 		const fullMsg = await generateWAMessage(
 			jid,
@@ -1775,6 +1791,12 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 getLIDForPN: (pn: string) => signalRepository.lidMapping.getLIDForPN(pn),
                 getLIDsForPNs: (pns: string[]) => signalRepository.lidMapping.getLIDsForPNs(pns),
                 deleteMessage,
+                requestPayment: (jid: string, options: RequestPaymentOptions) => requestPayment(jid, options, paymentDeps),
+                sendPayment: (jid: string, options: SendPaymentOptions) => sendPayment(jid, options, paymentDeps),
+                declinePaymentRequest: (jid: string, key: WAMessageKey) => declinePaymentRequest(jid, key, paymentDeps),
+                cancelPaymentRequest: (jid: string, key: WAMessageKey) => cancelPaymentRequest(jid, key, paymentDeps),
+                sendPaymentInvite: (jid: string, options: PaymentInviteOptions = {}) =>
+                        sendPaymentInvite(jid, options, paymentDeps),
                 sendChannelStatus: (jid: string, content: AnyMessageContent, options: ChannelStatusOptions = {}) =>
                         sendChannelStatus(
                                 jid,
