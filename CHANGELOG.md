@@ -1,3 +1,8 @@
+# 1.8.1 (2026-11-13)
+
+### Fixes
+- **Media group statuses now carry the same status info WhatsApp itself sends** — image, video, audio and sticker statuses posted through `sendGroupStatus` now include the group-status attribution (author LID, falling back to the phone-number JID), the poster status id, and the E2EE media-key domain info on the media message, matching a status posted from the official app. Text statuses are unchanged.
+
 # 1.8.0 (2026-11-12)
 
 ### Features
