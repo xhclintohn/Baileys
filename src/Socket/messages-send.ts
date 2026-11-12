@@ -507,23 +507,14 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 return didFetchNewSession
         }
 
-        const sendPeerDataOperationMessage = async (
-                pdoMessage: proto.Message.IPeerDataOperationRequestMessage
-        ): Promise<string> => {
+        const sendPeerMessage = async (protocolMessage: proto.IMessage['protocolMessage']): Promise<string> => {
                 if (!authState.creds.me?.id) {
                         throw new Boom('Not authenticated')
                 }
 
-                const protocolMessage: proto.IMessage = {
-                        protocolMessage: {
-                                peerDataOperationRequestMessage: pdoMessage,
-                                type: proto.Message.ProtocolMessage.Type.PEER_DATA_OPERATION_REQUEST_MESSAGE
-                        }
-                }
-
                 const meJid = jidNormalizedUser(authState.creds.me.id)
 
-                const msgId = await relayMessage(meJid, protocolMessage, {
+                const msgId = await relayMessage(meJid, { protocolMessage }, {
                         additionalAttributes: {
                                 category: 'peer',
 
@@ -539,6 +530,32 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
                 return msgId
         }
+
+        const sendPeerDataOperationMessage = async (
+                pdoMessage: proto.Message.IPeerDataOperationRequestMessage
+        ): Promise<string> => {
+                return sendPeerMessage({
+                        peerDataOperationRequestMessage: pdoMessage,
+                        type: proto.Message.ProtocolMessage.Type.PEER_DATA_OPERATION_REQUEST_MESSAGE
+                })
+        }
+
+        const requestAppStateSyncKey = async (keyIds: string[]): Promise<string> => {
+                if (!keyIds?.length) {
+                        throw new Boom('At least one app state sync key ID is required', { statusCode: 400 })
+                }
+
+                const msgId = await sendPeerMessage({
+                        type: proto.Message.ProtocolMessage.Type.APP_STATE_SYNC_KEY_REQUEST,
+                        appStateSyncKeyRequest: {
+                                keyIds: keyIds.map(keyId => ({ keyId: Buffer.from(keyId, 'base64') }))
+                        }
+                })
+
+                logger.info({ keyIds, msgId }, 'requested app state sync keys from phone')
+                return msgId
+        }
+
 
         const createParticipantNodes = async (
                 recipientJids: string[],
@@ -1782,6 +1799,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 waUploadToServer,
                 fetchPrivacySettings,
                 sendPeerDataOperationMessage,
+                sendPeerMessage,
+                requestAppStateSyncKey,
                 createParticipantNodes,
                 getUSyncDevices,
                 messageRetryManager,

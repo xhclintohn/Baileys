@@ -23,6 +23,8 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
         [_: string]: string;
     }>;
     sendPeerDataOperationMessage: (pdoMessage: proto.Message.IPeerDataOperationRequestMessage) => Promise<string>;
+    sendPeerMessage: (protocolMessage: proto.IMessage['protocolMessage']) => Promise<string>;
+    requestAppStateSyncKey: (keyIds: string[]) => Promise<string>;
     createParticipantNodes: (recipientJids: string[], message: proto.IMessage, extraAttrs?: BinaryNode["attrs"], dsmMessage?: proto.IMessage) => Promise<{
         nodes: BinaryNode[];
         shouldIncludeDeviceIdentity: boolean;
