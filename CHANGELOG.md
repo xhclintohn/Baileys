@@ -1,3 +1,21 @@
+# 1.7.0 (2026-11-12)
+
+### Features
+- **Channel statuses — send and receive** (ported from Casper-Tech-ke/baileys) — `sendChannelStatus(jid, content, options)` posts a channel admin's 24h status via a top-level `<status>` stanza, and incoming channel statuses now arrive as a `newsletter.status` event instead of being invisible; the existing `<status>` ack for personal statuses is unchanged
+- **Payment messages** — `requestPayment`, `sendPayment`, `declinePaymentRequest`, `cancelPaymentRequest`, and `sendPaymentInvite` send WhatsApp payment request/card messages (amounts in major units, 7-day request expiry); moving money still needs a payment provider
+- **Sticker packs** — `sendStickerPack(jid, pack)` sends up to 60 WebP stickers plus a tray icon as one `stickerPackMessage` the receiver can add to their collection, with a dependency-free ZIP writer and `sticker-pack` media types
+- **Full-image profile pictures** — `updateProfilePicture(jid, content, { full: true })` uploads the image as-is with no crop or padding (scaled to fit WhatsApp's 640 limit, aspect kept); the default 640x640 center crop is unchanged
+- **Delete and clear chat upgrades** — `deleteMessage(jid, key)` deletes a message for everyone (admin delete in groups), `deleteMessageForMe(jid, key, timestamp, deleteMedia?)` deletes one message for yourself only, and `clearChat` now takes `{ deleteStarred: false }` to keep starred messages; a clear done on another device now surfaces as `chats.update` with empty `messages`
+- **Article cards** — `sendArticleCard(jid, card)` sends a text message with a link-preview card (title, body, URL, thumbnail)
+- **Premium sticker flags** — stickers can now carry `isAiSticker`, `isAvatar`, `isLottie`, and `accessibilityLabel`
+- **Markdown tables to AI rich responses** — `parseMarkdownTables` / `markdownToAIRichResponse` convert Markdown pipe tables and prose into native AI rich-response submessages (utility only, not wired into `sendMessage`)
+- **Peer messages and app-state sync key requests** — `sendPeerMessage` is now exposed (the peer-data-operation sender is built on it), and `requestAppStateSyncKey(keyIds)` asks the phone to share missing app-state sync keys
+- **Username query IDs can be patched at runtime** — `setUsernameQueryIds` updates the MEX query IDs without a new release, for when WhatsApp rotates them server-side
+- **LID lookups are first-class socket functions** — `getPNForLID`, `getPNsForLIDs`, `getLIDForPN`, `getLIDsForPNs` are now on the socket directly
+
+### Fixes
+- **LID-to-phone lookups no longer add a `:0` device suffix** — `getPNForLID` now returns the plain phone JID for device 0, matching the LID side, so plain `===` comparisons against the phone number work
+
 # 1.6.0 (2026-10-20)
 
 ### Features
