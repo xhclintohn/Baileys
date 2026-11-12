@@ -32,6 +32,7 @@ export type GroupStatusDeps = {
     }) => Promise<unknown>;
     waUploadToServer: WAMediaUploadFunction;
     userJid?: string;
+    userLid?: string;
 };
 export declare const sendGroupStatus: (jid: string, content: AnyMessageContent, deps: GroupStatusDeps, options?: GroupStatusOptions) => Promise<WAMessage>;
 export {};
