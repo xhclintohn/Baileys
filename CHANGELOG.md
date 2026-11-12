@@ -1,3 +1,11 @@
+# 1.8.0 (2026-11-12)
+
+### Features
+- **Group statuses now use the real group-status mechanism** (ported from Casper-Tech-ke/baileys) — `sendGroupStatus(jid, content, options)` wraps the content in `groupStatusMessageV2` and relays it to the group, so the status actually shows inside the group; background colour and font options are supported for text statuses
+
+### Breaking changes
+- **`sendGroupStatus` has a new signature** — it used to take `(content, jids)` and post through the status-mentions mechanism, which never produced a real group status. It now takes `(jid, content, options)` like Casper's. `sendStatusMention` is unchanged and still uses the old mechanism.
+
 # 1.7.1 (2026-11-12)
 
 ### Fixes
