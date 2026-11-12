@@ -339,6 +339,7 @@ type MinimalRelayOptions = {
     useCachedGroupMetadata?: boolean;
 };
 export type MessageRelayOptions = MinimalRelayOptions & {
+    quoted?: WAMessage;
     participant?: {
         jid: string;
         count: number;
@@ -351,6 +352,7 @@ export type MessageRelayOptions = MinimalRelayOptions & {
     statusJidList?: string[];
 };
 export type MiscMessageGenerationOptions = MinimalRelayOptions & {
+    logger?: ILogger;
     timestamp?: Date;
     quoted?: WAMessage;
     ephemeralExpiration?: number | string;
@@ -361,7 +363,7 @@ export type MiscMessageGenerationOptions = MinimalRelayOptions & {
     broadcast?: boolean;
 };
 export type MessageGenerationOptionsFromContent = MiscMessageGenerationOptions & {
-    userJid: string;
+    userJid?: string;
 };
 export type WAMediaUploadFunction = (encFilePath: string, opts: {
     fileEncSha256B64: string;
