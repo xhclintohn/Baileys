@@ -11,7 +11,7 @@ import {
 } from '../Utils/index.js'
 import { isJidGroup, isPnUser, jidNormalizedUser, STORIES_JID } from '../WABinary/index.js'
 import type { ILogger } from '../Utils/logger.js'
-import type { WAMediaUploadFunction } from '../Types/Message.js'
+import type { MediaGenerationOptions, WAMediaUploadFunction } from '../Types/Message.js'
 import type { WAMessage, AnyMessageContent } from '../Types/index.js'
 import type { SocketConfig } from '../Types/Socket.js'
 
@@ -656,4 +656,43 @@ export class ToxicHandler {
 
                 return msg
         }
+}
+
+export type GroupStatusOptions = Pick<MediaGenerationOptions, 'backgroundColor' | 'font'>
+
+export type GroupStatusDeps = {
+        relayMessage: (jid: string, message: proto.IMessage, opts: { messageId: string }) => Promise<unknown>
+        waUploadToServer: WAMediaUploadFunction
+        userJid?: string
+}
+
+export const sendGroupStatus = async (
+        jid: string,
+        content: AnyMessageContent,
+        deps: GroupStatusDeps,
+        options: GroupStatusOptions = {}
+): Promise<WAMessage> => {
+        const { relayMessage, waUploadToServer, userJid } = deps
+
+        const inner = await generateWAMessageContent(content, { ...options, upload: waUploadToServer })
+
+        const messageSecret = crypto.randomBytes(32)
+
+        const wrapped = generateWAMessageFromContent(
+                jid,
+                {
+                        messageContextInfo: { messageSecret },
+                        groupStatusMessageV2: {
+                                message: {
+                                        ...inner,
+                                        messageContextInfo: { messageSecret }
+                                }
+                        }
+                },
+                { userJid } as any
+        )
+
+        await relayMessage(jid, wrapped.message!, { messageId: wrapped.key.id! })
+
+        return wrapped
 }
