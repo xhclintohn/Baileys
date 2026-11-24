@@ -7,7 +7,7 @@ import type { Agent } from 'https'
 import type { IAudioMetadata } from 'music-metadata'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { Readable, Transform } from 'stream'
+import { pipeline, Readable, Transform } from 'stream'
 import { URL } from 'url'
 import { proto } from '../../WAProto/index.js'
 import { DEFAULT_ORIGIN, MEDIA_HKDF_KEY_MAPPING, MEDIA_PATH_MAP, NEWSLETTER_MEDIA_PATH_MAP, type MediaType } from '../Defaults'
@@ -550,10 +550,14 @@ export type MediaDownloadOptions = {
 
 export const getUrlFromDirectPath = (directPath: string, host: string = DEF_HOST) => `https://${host}${directPath}`
 
+const PLACEHOLDER_MEDIA_HOST = 'a.whatsapp.net'
+
 const extractHost = (url: string | null | undefined): string | undefined => {
 	if (!url) return undefined
 	try {
-		return new URL(url).host
+		const host = new URL(url).host
+
+		return host === PLACEHOLDER_MEDIA_HOST ? undefined : host
 	} catch {
 		return undefined
 	}
@@ -670,7 +674,7 @@ export const downloadEncryptedContent = async (
 			}
 		}
 	})
-	return fetched.pipe(output, { end: true })
+	return pipeline(fetched, output, () => {})
 }
 
 export function extensionForMediaMessage(message: WAMessageContent) {
