@@ -92,6 +92,10 @@ export type PollMessageOptions = {
     messageSecret?: Uint8Array;
     toAnnouncementGroup?: boolean;
 };
+export type PollAddOptionOptions = {
+    pollCreationMessageKey: WAMessageKey;
+    option: string;
+};
 export type EventMessageOptions = {
     name: string;
     description?: string;
@@ -295,7 +299,13 @@ export type AnyRegularMessageContent = (({
     event: EventMessageOptions;
 } | ({
     poll: PollMessageOptions;
-} & Mentionable & Contextable & Editable) | ({
+} & Mentionable & Contextable & Editable) | {
+    pollAddOption: PollAddOptionOptions;
+} | {
+    pollUpdateMessage: proto.Message.IPollUpdateMessage;
+} | {
+    pollAddOptionMessage: proto.Message.IPollAddOptionMessage;
+} | ({
     album: AlbumMessageOptions;
 } & Contextable & Mentionable) | {
     contacts: {
