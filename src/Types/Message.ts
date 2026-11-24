@@ -136,6 +136,11 @@ export type PollMessageOptions = {
         toAnnouncementGroup?: boolean
 }
 
+export type PollAddOptionOptions = {
+        pollCreationMessageKey: WAMessageKey
+        option: string
+}
+
 export type EventMessageOptions = {
         name: string
         description?: string
@@ -357,6 +362,15 @@ export type AnyRegularMessageContent = (
           } & Mentionable &
                         Contextable &
                         Editable)
+        | {
+                        pollAddOption: PollAddOptionOptions
+          }
+        | {
+                        pollUpdateMessage: proto.Message.IPollUpdateMessage
+          }
+        | {
+                        pollAddOptionMessage: proto.Message.IPollAddOptionMessage
+          }
         | ({
                         album: AlbumMessageOptions
           } & Contextable &
