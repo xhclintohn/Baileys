@@ -1,5 +1,5 @@
 import type { BinaryNode } from '../WABinary/index.js';
-export type MessageType = 'message' | 'call' | 'receipt' | 'notification';
+export type MessageType = 'message' | 'call' | 'receipt' | 'notification' | 'status';
 export type OfflineNodeProcessorDeps = {
     isWsOpen: () => boolean;
     onUnexpectedError: (error: Error, msg: string) => void;
