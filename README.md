@@ -73,6 +73,13 @@ This update pulls in a batch of fixes and improvements from upstream Baileys and
 <details>
 <summary>🆕 Click to see everything in this update</summary>
 
+**New in 1.8.2:**
+- **Poll voting and message pinning.** Vote on a poll with `sendPollVote` (the vote counts in LID-addressed groups too), and pin or unpin a message for everyone with `pinMessage` / `unpinMessage`. Pinning a message that isn't in the chat is refused instead of sent.
+- **Android 13 by default.** New sessions show up as Chrome on Android 13.
+- **View-once sends that actually look view-once.** Outgoing view-once media now carries the stanza-level marker WhatsApp Web sends, so the other side shows it as view-once.
+- **Imported sessions heal themselves on connect.** A missing app-state sync key is asked for from the phone once, so archive and clear stop failing on imported sessions.
+- **A batch of upstream reliability fixes.** Sender keys are only remembered for devices that really got one, server encrypt notifications no longer crash without a count, restored retry limits survive restarts, media downloads stop using the placeholder host, and dropped downloads error out instead of hanging. WhatsApp version is now 2.3000.1054660005.
+
 **New in 1.8.1:**
 - **Media group statuses show up like official ones.** Image, video, audio and sticker statuses posted with `sendGroupStatus` now carry the same status info the official app sends (author attribution, poster id, media-key info), so clients display them the same way. Text statuses are unchanged.
 

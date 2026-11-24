@@ -1,3 +1,21 @@
+# 1.8.2 (2026-11-24)
+
+### Features
+- **Android 13 is now the default browser** — new sessions present as Chrome on Android 13 instead of macOS Chrome
+- **Poll voting** (ported from Casper-Tech-ke/baileys) — `sendPollVote(jid, pollCreationMessageKey, options, pollInfo)` votes on a poll by option name, encrypting the vote with the poll creation message's secret; the voter JID is the bot's LID in LID-addressed groups so the vote actually counts, and poll votes are now hidden on decrypt failure like pins and reactions
+- **Message pinning** (ported from Casper-Tech-ke/baileys) — `pinMessage(jid, key, duration)` pins a message for everyone (24h, 7 days or 30 days) and `unpinMessage(jid, key)` removes the pin; pinning refuses a message that is not in the chat's store instead of sending a pin the server would flag
+- **Sync key auto-resolve** (ported from Casper-Tech-ke/baileys) — on connect, a session whose stored app-state sync key is missing asks the phone for it once, so archive/clear and other app-state operations stop failing on imported sessions
+- **Offline status routing** (ported from Casper-Tech-ke/baileys) — top-level `<status>` stanzas received while offline are now queued to the channel-status handler instead of dropped
+
+### Fixes
+- **View-once sends are now marked at the stanza level** (upstream #2837, #2847) — outgoing view-once image, video, round video and audio (including inside disappearing messages) carry `<meta view_once="true"/>`, and the media type is read from the unwrapped content, so the receiver shows them as view-once
+- **Sender keys are only remembered for devices that actually got one** (upstream #2891) — a failed SKDM encryption no longer marks the device as done, so the next send retries it instead of silently skipping it
+- **Server encrypt notifications no longer crash without a count** (upstream #2924) — digest and post-quantum pre-key notifications are handled instead of crashing on a missing `<count>`; a digest check that times out is reported as failed, never as OK
+- **Restored message retry limits survive a restart** (upstream #2888) — retry counts read back from the cache are restored into the retry manager (non-finite values clamp to the limit) instead of being reset
+- **Media downloads no longer use the placeholder host** (upstream #2900) — a media URL on `a.whatsapp.net` falls back to `mmg.whatsapp.net` via the message's direct path
+- **Dropped downloads now error instead of hanging** (upstream #2923) — encrypted media downloads use `pipeline` so a connection dropped mid-body errors the returned stream
+- **WhatsApp version bumped to 2.3000.1054660005** (Casper's live-proven version)
+
 # 1.8.1 (2026-11-13)
 
 ### Fixes
