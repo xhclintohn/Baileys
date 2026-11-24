@@ -1937,12 +1937,29 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                 }
         }
 
+        const handleChannelStatus = async (node: BinaryNode) => {
+                const status = decodeChannelStatus(node)
+                if (!status) {
+                        try {
+                                await sendMessageAck(node)
+                        } catch (error) {
+                                onUnexpectedError(error as Error, 'acking status stanza')
+                        }
+                        return
+                }
+
+                ev.buffer()
+                ev.emit('newsletter.status', status)
+                ev.flush()
+        }
+
         const offlineNodeProcessor = makeOfflineNodeProcessor(
                 new Map<MessageType, (node: BinaryNode) => Promise<void>>([
                         ['message', handleMessage],
                         ['call', handleCall],
                         ['receipt', handleReceipt],
-                        ['notification', handleNotification]
+                        ['notification', handleNotification],
+                        ['status', handleChannelStatus]
                 ]),
                 {
                         isWsOpen: () => ws.isOpen,
@@ -2004,16 +2021,8 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
         // Some accounts now get contacts' statuses as a top-level <status> stanza
         // instead of <message from="status@broadcast">. It isn't decoded here, but it
         // must be acked: the server ends the stream about 50 minutes later otherwise.
-        ws.on('CB:status', (node: BinaryNode) => {
-                const status = decodeChannelStatus(node)
-                if (status) {
-                        ev.buffer()
-                        ev.emit('newsletter.status', status)
-                        ev.flush()
-                        return
-                }
-
-                sendMessageAck(node).catch(error => onUnexpectedError(error, 'acking status'))
+        ws.on('CB:status', async (node: BinaryNode) => {
+                await handleChannelStatus(node).catch(error => onUnexpectedError(error, 'handling channel status'))
         })
 
         ws.on('CB:ack,class:message', (node: BinaryNode) => {
