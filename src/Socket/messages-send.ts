@@ -38,6 +38,7 @@ import {
         getStatusCodeForMediaRetry,
         getUrlFromDirectPath,
         getWAUploadToServer,
+        isViewOnceMessage,
         MessageRetryManager,
         normalizeMessageContent,
         parseAndInjectE2ESessions,
@@ -712,7 +713,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 }
 
                 await authState.keys.transaction(async () => {
-                        const mediaType = getMediaType(message)
+                        const mediaType = getMediaType(normalizeMessageContent(message) || message)
                         if (mediaType) {
                                 extraAttrs['mediatype'] = mediaType
                         }
@@ -1058,6 +1059,10 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                 })
 
                                 logger.debug({ jid }, 'adding device identity')
+                        }
+
+                        if (isViewOnceMessage(message)) {
+                                ;(stanza.content as BinaryNode[]).push({ tag: 'meta', attrs: { view_once: 'true' } })
                         }
 
                         if (

@@ -1016,6 +1016,14 @@ export const normalizeMessageContent = (content: WAMessageContent | null | undef
 	return content
 }
 
+export const isViewOnceMessage = (content: WAMessageContent | null | undefined) => {
+	const inner = content?.ephemeralMessage?.message ?? content
+
+	const wrapped = (inner?.viewOnceMessage || inner?.viewOnceMessageV2 || inner?.viewOnceMessageV2Extension)?.message
+
+	return !!(wrapped?.imageMessage || wrapped?.videoMessage || wrapped?.ptvMessage || wrapped?.audioMessage)
+}
+
 export const extractMessageContent = (content: WAMessageContent | undefined | null): WAMessageContent | undefined => {
 	const extractFromTemplateMessage = (
 		msg: proto.Message.TemplateMessage.IHydratedFourRowTemplate | proto.Message.IButtonsMessage
