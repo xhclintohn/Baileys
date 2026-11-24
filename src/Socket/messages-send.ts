@@ -103,7 +103,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 patchMessageBeforeSending,
                 cachedGroupMetadata,
                 enableRecentMessageCache,
-                maxMsgRetryCount
+                maxMsgRetryCount,
+                getMessage
         } = config
         const sock = makeUsernameSocket(config)
         const {
@@ -1801,6 +1802,57 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		return fullMsg
 	}
 
+	const pinMessage = async (
+		jid: string,
+		key: WAMessageKey,
+		duration: 86400 | 604800 | 2592000 = 86400
+	) => {
+		if (key.remoteJid && key.remoteJid !== jid) {
+			throw new Error(`refusing to pin message ${key.id}: it belongs to ${key.remoteJid}, not ${jid}`)
+		}
+		const found = typeof getMessage === 'function' ? await getMessage({ ...key, remoteJid: jid }) : undefined
+		if (!found) {
+			throw new Error(`refusing to pin message ${key.id} in ${jid}: message not found in this chat`)
+		}
+		const fullMsg = await generateWAMessage(
+			jid,
+			{ pin: key, type: proto.PinInChat.Type.PIN_FOR_ALL, time: duration },
+			{
+				logger,
+				userJid: authState.creds.me!.id,
+				upload: waUploadToServer,
+				messageId: generateMessageIDV2(sock.user?.id)
+			}
+		)
+		await relayMessage(jid, fullMsg.message!, { messageId: fullMsg.key.id! })
+		if (config.emitOwnEvents) {
+			process.nextTick(async () => {
+				await messageMutex.mutex(() => upsertMessage(fullMsg, 'append'))
+			})
+		}
+		return fullMsg
+	}
+
+	const unpinMessage = async (jid: string, key: WAMessageKey) => {
+		const fullMsg = await generateWAMessage(
+			jid,
+			{ pin: key, type: proto.PinInChat.Type.UNPIN_FOR_ALL },
+			{
+				logger,
+				userJid: authState.creds.me!.id,
+				upload: waUploadToServer,
+				messageId: generateMessageIDV2(sock.user?.id)
+			}
+		)
+		await relayMessage(jid, fullMsg.message!, { messageId: fullMsg.key.id! })
+		if (config.emitOwnEvents) {
+			process.nextTick(async () => {
+				await messageMutex.mutex(() => upsertMessage(fullMsg, 'append'))
+			})
+		}
+		return fullMsg
+	}
+
 	const sendPollVote = async (
 		jid: string,
 		pollCreationMessageKey: WAMessageKey,
@@ -1868,6 +1920,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 assertSessions,
                 relayMessage,
                 sendPollVote,
+                pinMessage,
+                unpinMessage,
                 sendReceipt,
                 sendReceipts,
                 readMessages,
