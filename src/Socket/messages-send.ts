@@ -826,7 +826,6 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                                 device.device !== 99
                                         ) {
                                                 senderKeyRecipients.push(deviceJid)
-                                                senderKeyMap[deviceJid] = true
                                         }
                                 }
 
@@ -847,6 +846,12 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                         shouldIncludeDeviceIdentity = shouldIncludeDeviceIdentity || result.shouldIncludeDeviceIdentity
 
                                         participants.push(...result.nodes)
+
+                                        for (const { attrs } of result.nodes) {
+                                                if (attrs.jid) {
+                                                        senderKeyMap[attrs.jid] = true
+                                                }
+                                        }
                                 }
 
                                 binaryNodeContent.push({
