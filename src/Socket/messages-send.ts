@@ -20,6 +20,7 @@ import type {
 import {
         aggregateMessageKeysNotFromMe,
         applyBotForwardedWrapper,
+        assertMeId,
         assertMediaContent,
         bindWaitForEvent,
         decryptMediaRetryData,
@@ -27,6 +28,7 @@ import {
         encodeSignedDeviceIdentity,
         encodeWAMessage,
         encryptMediaRetryRequest,
+        encryptPollVote,
         extractDeviceJids,
         generateBotHtmlResponse,
         generateMessageID,
@@ -35,6 +37,7 @@ import {
         generateWAMessage,
         generateWAMessageContent,
         generateWAMessageFromContent,
+        getKeyAuthor,
         getStatusCodeForMediaRetry,
         getUrlFromDirectPath,
         getWAUploadToServer,
@@ -43,6 +46,7 @@ import {
         normalizeMessageContent,
         parseAndInjectE2ESessions,
         prepareWAMessageMedia,
+        sha256,
         unixTimestampSeconds
 } from '../Utils'
 import { getUrlInfo } from '../Utils/link-preview'
@@ -741,7 +745,11 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                 return
                         }
 
-                        if (normalizeMessageContent(message)?.pinInChatMessage || normalizeMessageContent(message)?.reactionMessage) {
+                        if (
+                                normalizeMessageContent(message)?.pinInChatMessage ||
+                                normalizeMessageContent(message)?.reactionMessage ||
+                                normalizeMessageContent(message)?.pollUpdateMessage
+                        ) {
                                 extraAttrs['decrypt-fail'] = 'hide'
                         }
 
@@ -1004,6 +1012,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                         attrs: {
                                                 v: '2',
                                                 type,
+                                                ...extraAttrs,
                                                 count: participant!.count.toString()
                                         },
                                         content: encryptedContent
@@ -1792,11 +1801,73 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		return fullMsg
 	}
 
+	const sendPollVote = async (
+		jid: string,
+		pollCreationMessageKey: WAMessageKey,
+		options: string | string[],
+		pollInfo: { messageSecret: Uint8Array; creatorJid?: string }
+	) => {
+		const meIdNormalised = jidNormalizedUser(assertMeId(authState.creds))
+		const meLidNormalised = authState.creds.me?.lid ? jidNormalizedUser(authState.creds.me.lid) : null
+		const pollMsgId = pollCreationMessageKey.id
+		if (!pollMsgId) {
+			throw new Boom('pollCreationMessageKey needs an id', { statusCode: 400 })
+		}
+
+		const optionNames = Array.isArray(options) ? options : [options]
+		if (!optionNames.length) {
+			throw new Boom('sendPollVote needs at least one option', { statusCode: 400 })
+		}
+
+		const creatorJid = pollInfo.creatorJid || getKeyAuthor(pollCreationMessageKey, meIdNormalised)
+		const voterJid = (creatorJid.endsWith('@lid') || pollCreationMessageKey.participant?.endsWith('@lid') || pollCreationMessageKey.addressingMode === 'lid') && meLidNormalised
+			? meLidNormalised
+			: meIdNormalised
+
+		const vote = encryptPollVote(
+			{ selectedOptions: optionNames.map(name => sha256(Buffer.from(name))) },
+			{
+				pollCreatorJid: creatorJid,
+				pollMsgId,
+				pollEncKey: pollInfo.messageSecret,
+				voterJid
+			}
+		)
+
+		const fullMsg = await generateWAMessage(
+			jid,
+			{
+				pollUpdateMessage: {
+					pollCreationMessageKey,
+					vote,
+					senderTimestampMs: Date.now()
+				}
+			},
+			{
+				logger,
+				userJid: authState.creds.me!.id,
+				upload: waUploadToServer,
+				messageId: generateMessageIDV2(sock.user?.id)
+			}
+		)
+
+		await relayMessage(jid, fullMsg.message!, { messageId: fullMsg.key.id! })
+
+		if (config.emitOwnEvents) {
+			process.nextTick(async () => {
+				await messageMutex.mutex(() => upsertMessage(fullMsg, 'append'))
+			})
+		}
+
+		return fullMsg
+	}
+
         return {
                 ...sock,
                 issuePrivacyTokens,
                 assertSessions,
                 relayMessage,
+                sendPollVote,
                 sendReceipt,
                 sendReceipts,
                 readMessages,
