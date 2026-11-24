@@ -674,7 +674,9 @@ export const downloadEncryptedContent = async (
 			}
 		}
 	})
-	return pipeline(fetched, output, () => {})
+	pipeline(fetched, output, () => {})
+
+	return output
 }
 
 export function extensionForMediaMessage(message: WAMessageContent) {
