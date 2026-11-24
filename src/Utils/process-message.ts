@@ -1,4 +1,5 @@
 import { Boom } from '@hapi/boom'
+import { randomBytes } from 'crypto'
 import { proto } from '../../WAProto/index.js'
 import type {
 	AuthenticationCreds,
@@ -30,7 +31,7 @@ import {
 	jidEncode,
 	jidNormalizedUser
 } from '../WABinary'
-import { aesDecryptGCM, hmacSign } from './crypto'
+import { aesDecryptGCM, aesEncryptGCM, hmacSign, sha256 } from './crypto'
 import { getKeyAuthor, toNumber } from './generics'
 import { downloadAndProcessHistorySyncNotification } from './history'
 import type { ILogger } from './logger'
@@ -228,6 +229,32 @@ export function decryptPollVote(
 
 	const decrypted = aesDecryptGCM(encPayload!, decKey, encIv!, aad)
 	return proto.Message.PollVoteMessage.decode(decrypted)
+
+	function toBinary(txt: string) {
+		return Buffer.from(txt)
+	}
+}
+
+export function encryptPollVote(
+	{ selectedOptions }: { selectedOptions: Uint8Array[] },
+	{ pollCreatorJid, pollMsgId, pollEncKey, voterJid }: PollContext
+): proto.Message.IPollEncValue {
+	const sign = Buffer.concat([
+		toBinary(pollMsgId),
+		toBinary(pollCreatorJid),
+		toBinary(voterJid),
+		toBinary('Poll Vote'),
+		new Uint8Array([1])
+	])
+
+	const key0 = hmacSign(pollEncKey, new Uint8Array(32), 'sha256')
+	const encKey = hmacSign(sign, key0, 'sha256')
+	const aad = toBinary(`${pollMsgId}\u0000${voterJid}`)
+
+	const plaintext = proto.Message.PollVoteMessage.encode({ selectedOptions }).finish()
+	const encIv = randomBytes(12)
+	const encPayload = aesEncryptGCM(plaintext, encKey, encIv, aad)
+	return { encPayload, encIv }
 
 	function toBinary(txt: string) {
 		return Buffer.from(txt)
