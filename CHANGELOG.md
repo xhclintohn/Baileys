@@ -1,3 +1,8 @@
+# 1.8.3 (2026-11-25)
+
+### Fixes
+- **Removed a stray sync-value log line** — the "requested the missing sync value from the phone" message was printed through Baileys' default logger instead of the socket logger, so it showed up even when the socket logger was set to silent. The auto-resolve still runs and logs its own errors; only the extra info line is gone.
+
 # 1.8.2 (2026-11-24)
 
 ### Features
