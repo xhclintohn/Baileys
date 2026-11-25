@@ -30,11 +30,7 @@ export const makeCommunitiesSocket = (config: SocketConfig) => {
 			return
 		}
 
-		autoResolveSyncKey().then(status => {
-			if (status === 'requested') {
-				logger.info('requested the missing sync value from the phone')
-			}
-		})
+		autoResolveSyncKey()
 	})
 
 	const communityQuery = async (jid: string, type: 'get' | 'set', content: BinaryNode[]) =>
