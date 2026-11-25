@@ -92,6 +92,10 @@ export type PollMessageOptions = {
     messageSecret?: Uint8Array;
     toAnnouncementGroup?: boolean;
 };
+export type PollAddOptionOptions = {
+    pollCreationMessageKey: WAMessageKey;
+    option: string;
+};
 export type EventMessageOptions = {
     name: string;
     description?: string;
@@ -103,6 +107,17 @@ export type EventMessageOptions = {
     isScheduleCall?: boolean;
     extraGuestsAllowed?: boolean;
     messageSecret?: Uint8Array<ArrayBufferLike>;
+};
+export type ArticleCardOptions = {
+    text?: string;
+    title: string;
+    body?: string;
+    url: string;
+    thumbnailUrl?: string;
+    mediaType?: proto.ContextInfo.ExternalAdReplyInfo.MediaType;
+    containsAutoReply?: boolean;
+    renderLargerThumbnail?: boolean;
+    showAdAttribution?: boolean;
 };
 export type AlbumMessageOptions = {
     expectedImageCount?: number;
@@ -131,6 +146,10 @@ export type AnyMediaMessageContent = (({
 } | ({
     sticker: WAMediaUpload;
     isAnimated?: boolean;
+    isAiSticker?: boolean;
+    isAvatar?: boolean;
+    isLottie?: boolean;
+    accessibilityLabel?: string;
 } & WithDimensions) | ({
     document: WAMediaUpload;
     mimetype: string;
@@ -280,7 +299,13 @@ export type AnyRegularMessageContent = (({
     event: EventMessageOptions;
 } | ({
     poll: PollMessageOptions;
-} & Mentionable & Contextable & Editable) | ({
+} & Mentionable & Contextable & Editable) | {
+    pollAddOption: PollAddOptionOptions;
+} | {
+    pollUpdateMessage: proto.Message.IPollUpdateMessage;
+} | {
+    pollAddOptionMessage: proto.Message.IPollAddOptionMessage;
+} | ({
     album: AlbumMessageOptions;
 } & Contextable & Mentionable) | {
     contacts: {
@@ -324,6 +349,7 @@ type MinimalRelayOptions = {
     useCachedGroupMetadata?: boolean;
 };
 export type MessageRelayOptions = MinimalRelayOptions & {
+    quoted?: WAMessage;
     participant?: {
         jid: string;
         count: number;
@@ -336,6 +362,7 @@ export type MessageRelayOptions = MinimalRelayOptions & {
     statusJidList?: string[];
 };
 export type MiscMessageGenerationOptions = MinimalRelayOptions & {
+    logger?: ILogger;
     timestamp?: Date;
     quoted?: WAMessage;
     ephemeralExpiration?: number | string;
@@ -346,7 +373,7 @@ export type MiscMessageGenerationOptions = MinimalRelayOptions & {
     broadcast?: boolean;
 };
 export type MessageGenerationOptionsFromContent = MiscMessageGenerationOptions & {
-    userJid: string;
+    userJid?: string;
 };
 export type WAMediaUploadFunction = (encFilePath: string, opts: {
     fileEncSha256B64: string;

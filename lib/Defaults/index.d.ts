@@ -38,6 +38,8 @@ export declare const MEDIA_HKDF_KEY_MAPPING: {
     product: string;
     ptt: string;
     sticker: string;
+    'sticker-pack': string;
+    'thumbnail-sticker-pack': string;
     video: string;
     'thumbnail-document': string;
     'thumbnail-image': string;

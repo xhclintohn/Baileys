@@ -1,3 +1,57 @@
+# 1.8.2 (2026-11-24)
+
+### Features
+- **Android 13 is now the default browser** — new sessions present as Chrome on Android 13 instead of macOS Chrome
+- **Poll voting** (ported from Casper-Tech-ke/baileys) — `sendPollVote(jid, pollCreationMessageKey, options, pollInfo)` votes on a poll by option name, encrypting the vote with the poll creation message's secret; the voter JID is the bot's LID in LID-addressed groups so the vote actually counts, and poll votes are now hidden on decrypt failure like pins and reactions
+- **Message pinning** (ported from Casper-Tech-ke/baileys) — `pinMessage(jid, key, duration)` pins a message for everyone (24h, 7 days or 30 days) and `unpinMessage(jid, key)` removes the pin; pinning refuses a message that is not in the chat's store instead of sending a pin the server would flag
+- **Sync key auto-resolve** (ported from Casper-Tech-ke/baileys) — on connect, a session whose stored app-state sync key is missing asks the phone for it once, so archive/clear and other app-state operations stop failing on imported sessions
+- **Offline status routing** (ported from Casper-Tech-ke/baileys) — top-level `<status>` stanzas received while offline are now queued to the channel-status handler instead of dropped
+
+### Fixes
+- **View-once sends are now marked at the stanza level** (upstream #2837, #2847) — outgoing view-once image, video, round video and audio (including inside disappearing messages) carry `<meta view_once="true"/>`, and the media type is read from the unwrapped content, so the receiver shows them as view-once
+- **Sender keys are only remembered for devices that actually got one** (upstream #2891) — a failed SKDM encryption no longer marks the device as done, so the next send retries it instead of silently skipping it
+- **Server encrypt notifications no longer crash without a count** (upstream #2924) — digest and post-quantum pre-key notifications are handled instead of crashing on a missing `<count>`; a digest check that times out is reported as failed, never as OK
+- **Restored message retry limits survive a restart** (upstream #2888) — retry counts read back from the cache are restored into the retry manager (non-finite values clamp to the limit) instead of being reset
+- **Media downloads no longer use the placeholder host** (upstream #2900) — a media URL on `a.whatsapp.net` falls back to `mmg.whatsapp.net` via the message's direct path
+- **Dropped downloads now error instead of hanging** (upstream #2923) — encrypted media downloads use `pipeline` so a connection dropped mid-body errors the returned stream
+- **WhatsApp version bumped to 2.3000.1054660005** (Casper's live-proven version)
+
+# 1.8.1 (2026-11-13)
+
+### Fixes
+- **Media group statuses now carry the same status info WhatsApp itself sends** — image, video, audio and sticker statuses posted through `sendGroupStatus` now include the group-status attribution (author LID, falling back to the phone-number JID), the poster status id, and the E2EE media-key domain info on the media message, matching a status posted from the official app. Text statuses are unchanged.
+
+# 1.8.0 (2026-11-12)
+
+### Features
+- **Group statuses now use the real group-status mechanism** (ported from Casper-Tech-ke/baileys) — `sendGroupStatus(jid, content, options)` wraps the content in `groupStatusMessageV2` and relays it to the group, so the status actually shows inside the group; background colour and font options are supported for text statuses
+
+### Breaking changes
+- **`sendGroupStatus` has a new signature** — it used to take `(content, jids)` and post through the status-mentions mechanism, which never produced a real group status. It now takes `(jid, content, options)` like Casper's. `sendStatusMention` is unchanged and still uses the old mechanism.
+
+# 1.7.1 (2026-11-12)
+
+### Fixes
+- **All 91 pre-existing TypeScript errors fixed** — `tsc -P tsconfig.build.json --noEmit` now reports 0 errors. Every fix is type-level only (missing type exports, annotations, and casts matching what the code already does at runtime): the compiled `lib/*.js` output is unchanged, and only the matching `lib/*.d.ts` declarations were updated. One latent error the fixes unmasked (a `logger` option the generator already reads) is fixed too.
+
+# 1.7.0 (2026-11-12)
+
+### Features
+- **Channel statuses — send and receive** (ported from Casper-Tech-ke/baileys) — `sendChannelStatus(jid, content, options)` posts a channel admin's 24h status via a top-level `<status>` stanza, and incoming channel statuses now arrive as a `newsletter.status` event instead of being invisible; the existing `<status>` ack for personal statuses is unchanged
+- **Payment messages** — `requestPayment`, `sendPayment`, `declinePaymentRequest`, `cancelPaymentRequest`, and `sendPaymentInvite` send WhatsApp payment request/card messages (amounts in major units, 7-day request expiry); moving money still needs a payment provider
+- **Sticker packs** — `sendStickerPack(jid, pack)` sends up to 60 WebP stickers plus a tray icon as one `stickerPackMessage` the receiver can add to their collection, with a dependency-free ZIP writer and `sticker-pack` media types
+- **Full-image profile pictures** — `updateProfilePicture(jid, content, { full: true })` uploads the image as-is with no crop or padding (scaled to fit WhatsApp's 640 limit, aspect kept); the default 640x640 center crop is unchanged
+- **Delete and clear chat upgrades** — `deleteMessage(jid, key)` deletes a message for everyone (admin delete in groups), `deleteMessageForMe(jid, key, timestamp, deleteMedia?)` deletes one message for yourself only, and `clearChat` now takes `{ deleteStarred: false }` to keep starred messages; a clear done on another device now surfaces as `chats.update` with empty `messages`
+- **Article cards** — `sendArticleCard(jid, card)` sends a text message with a link-preview card (title, body, URL, thumbnail)
+- **Premium sticker flags** — stickers can now carry `isAiSticker`, `isAvatar`, `isLottie`, and `accessibilityLabel`
+- **Markdown tables to AI rich responses** — `parseMarkdownTables` / `markdownToAIRichResponse` convert Markdown pipe tables and prose into native AI rich-response submessages (utility only, not wired into `sendMessage`)
+- **Peer messages and app-state sync key requests** — `sendPeerMessage` is now exposed (the peer-data-operation sender is built on it), and `requestAppStateSyncKey(keyIds)` asks the phone to share missing app-state sync keys
+- **Username query IDs can be patched at runtime** — `setUsernameQueryIds` updates the MEX query IDs without a new release, for when WhatsApp rotates them server-side
+- **LID lookups are first-class socket functions** — `getPNForLID`, `getPNsForLIDs`, `getLIDForPN`, `getLIDsForPNs` are now on the socket directly
+
+### Fixes
+- **LID-to-phone lookups no longer add a `:0` device suffix** — `getPNForLID` now returns the plain phone JID for device 0, matching the LID side, so plain `===` comparisons against the phone number work
+
 # 1.6.0 (2026-10-20)
 
 ### Features

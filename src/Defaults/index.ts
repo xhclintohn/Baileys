@@ -4,7 +4,7 @@ import type { AuthenticationState, SocketConfig, WAVersion } from '../Types'
 import { Browsers } from '../Utils/browser-utils'
 import logger from '../Utils/logger'
 
-const version = [2, 3000, 1049110567]
+const version = [2, 3000, 1054660005]
 
 export const UNAUTHORIZED_CODES = [401, 403, 419]
 
@@ -50,7 +50,7 @@ export const PROCESSABLE_HISTORY_TYPES = [
 
 export const DEFAULT_CONNECTION_CONFIG: SocketConfig = {
 	version: version as WAVersion,
-	browser: Browsers.macOS('Chrome'),
+	browser: Browsers.android('Chrome'),
 	waWebSocketUrl: 'wss://web.whatsapp.com/ws/chat',
 	connectTimeoutMs: 20_000,
 	keepAliveIntervalMs: 30_000,
@@ -95,6 +95,8 @@ export const MEDIA_PATH_MAP: { [T in MediaType]?: string } = {
 	document: '/mms/document',
 	audio: '/mms/audio',
 	sticker: '/mms/image',
+	'sticker-pack': '/mms/sticker-pack',
+	'thumbnail-sticker-pack': '/mms/sticker-pack',
 	'thumbnail-link': '/mms/image',
 	'product-catalog-image': '/product/image',
 	'md-app-state': '',
@@ -123,6 +125,8 @@ export const MEDIA_HKDF_KEY_MAPPING = {
 	product: 'Image',
 	ptt: 'Audio',
 	sticker: 'Image',
+	'sticker-pack': 'Sticker Pack',
+	'thumbnail-sticker-pack': 'Sticker Pack Thumbnail',
 	video: 'Video',
 	'thumbnail-document': 'Document Thumbnail',
 	'thumbnail-image': 'Image Thumbnail',
@@ -152,4 +156,11 @@ export const DEFAULT_CACHE_TTLS = {
 	MSG_RETRY: 60 * 60,
 	CALL_OFFER: 5 * 60,
 	USER_DEVICES: 5 * 60
+}
+
+export const TimeMs = {
+	Minute: 60 * 1000,
+	Hour: 60 * 60 * 1000,
+	Day: 24 * 60 * 60 * 1000,
+	Week: 7 * 24 * 60 * 60 * 1000
 }

@@ -7,7 +7,7 @@ import {
 	type WAMessageKey,
 	WAMessageStubType
 } from '../Types'
-import { generateMessageID, generateMessageIDV2, unixTimestampSeconds } from '../Utils'
+import { generateMessageID, generateMessageIDV2, makeSyncKeyAutoResolver, unixTimestampSeconds } from '../Utils'
 import logger from '../Utils/logger'
 import {
 	type BinaryNode,
@@ -21,7 +21,17 @@ import { makeBusinessSocket } from './business'
 
 export const makeCommunitiesSocket = (config: SocketConfig) => {
 	const sock = makeBusinessSocket(config)
-	const { authState, ev, query, upsertMessage } = sock
+	const { authState, ev, query, upsertMessage, requestAppStateSyncKey } = sock
+
+	const autoResolveSyncKey = makeSyncKeyAutoResolver({ authState, requestKey: requestAppStateSyncKey })
+
+	ev.on('connection.update', ({ connection }) => {
+		if (connection !== 'open') {
+			return
+		}
+
+		autoResolveSyncKey()
+	})
 
 	const communityQuery = async (jid: string, type: 'get' | 'set', content: BinaryNode[]) =>
 		query({

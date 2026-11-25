@@ -1,10 +1,11 @@
 import { Boom } from '@hapi/boom';
 import { proto } from '../../WAProto/index.js';
-import type { AnyMessageContent, MediaConnInfo, MessageReceiptType, MessageRelayOptions, MiscMessageGenerationOptions, SocketConfig, WAMessage, WAMessageKey } from '../Types/index.js';
+import type { AnyMessageContent, MediaConnInfo, MessageReceiptType, MessageRelayOptions, MiscMessageGenerationOptions, PaymentInviteOptions, RequestPaymentOptions, SendPaymentOptions, SocketConfig, StickerPack, WAMessage, WAMessageKey } from '../Types/index.js';
 import { MessageRetryManager } from '../Utils/index.js';
 import { type BinaryNode, type JidWithDevice } from '../WABinary/index.js';
 import { USyncQuery } from '../WAUSync/index.js';
-import { ToxicHandler } from './groupStatus.js';
+import type { ChannelStatusOptions, ChannelStatusSent } from './channelStatus.js';
+import { ToxicHandler, type GroupStatusOptions } from './groupStatus.js';
 export declare const makeMessagesSocket: (config: SocketConfig) => {
     issuePrivacyTokens: (jids: string[], timestamp?: number) => Promise<any>;
     assertSessions: (jids: string[], force?: boolean) => Promise<boolean>;
@@ -18,6 +19,8 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
         [_: string]: string;
     }>;
     sendPeerDataOperationMessage: (pdoMessage: proto.Message.IPeerDataOperationRequestMessage) => Promise<string>;
+    sendPeerMessage: (protocolMessage: proto.IMessage['protocolMessage']) => Promise<string>;
+    requestAppStateSyncKey: (keyIds: string[]) => Promise<string>;
     createParticipantNodes: (recipientJids: string[], message: proto.IMessage, extraAttrs?: BinaryNode["attrs"], dsmMessage?: proto.IMessage) => Promise<{
         nodes: BinaryNode[];
         shouldIncludeDeviceIdentity: boolean;
@@ -29,6 +32,19 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     updateMemberLabel: (jid: string, memberLabel: string) => Promise<string>;
     toxicHandler: ToxicHandler;
     sendStatusMention: (content: Record<string, any>, jids?: string[]) => Promise<WAMessage>;
+    sendGroupStatus: (jid: string, content: AnyMessageContent, options?: GroupStatusOptions) => Promise<WAMessage>;
+    getPNForLID: (lid: string) => Promise<string | null>;
+    getPNsForLIDs: (lids: string[]) => Promise<import("../Types").LIDMapping[] | null>;
+    getLIDForPN: (pn: string) => Promise<string | null>;
+    getLIDsForPNs: (pns: string[]) => Promise<import("../Types").LIDMapping[] | null>;
+    deleteMessage: (jid: string, key: WAMessageKey) => Promise<WAMessage>;
+    requestPayment: (jid: string, options: RequestPaymentOptions) => Promise<import("../Types").PaymentResult>;
+    sendPayment: (jid: string, options: SendPaymentOptions) => Promise<import("../Types").PaymentResult>;
+    declinePaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
+    cancelPaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
+    sendPaymentInvite: (jid: string, options?: PaymentInviteOptions) => Promise<import("../Types").PaymentResult>;
+    sendStickerPack: (jid: string, pack: StickerPack) => Promise<import("../Types").StickerPackResult>;
+    sendChannelStatus: (jid: string, content: AnyMessageContent, options?: ChannelStatusOptions) => Promise<ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;
     newsletterCreate: (name: string, description?: string) => Promise<import("../Types").NewsletterMetadata>;

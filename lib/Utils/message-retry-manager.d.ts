@@ -59,6 +59,7 @@ export declare class MessageRetryManager {
     isMacError(errorCode: RetryReason | undefined): boolean;
     incrementRetryCount(messageId: string): number;
     getRetryCount(messageId: string): number;
+    restoreRetryCount(messageId: string, retryCount: number): void;
     hasExceededMaxRetries(messageId: string): boolean;
     markRetrySuccess(messageId: string): void;
     markRetryFailed(messageId: string): void;

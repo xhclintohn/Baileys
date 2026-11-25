@@ -1,6 +1,13 @@
 import type { Boom } from '@hapi/boom'
 import type { Contact } from './Contact'
 
+export enum SyncState {
+	Connecting = 0,
+	AwaitingInitialSync = 1,
+	Syncing = 2,
+	Online = 3
+}
+
 export type WAConnectionState = 'open' | 'connecting' | 'close'
 
 export type ConnectionState = {
@@ -39,15 +46,15 @@ export type ConnectionState = {
 }
 
 export type ReachoutTimelockState = {
-	enforced: boolean
-	type?: ReachoutTimelockEnforcementType
-	until?: number
+	isActive: boolean
+	timeEnforcementEnds?: Date
+	enforcementType?: ReachoutTimelockEnforcementType | string
 }
 
 export enum ReachoutTimelockEnforcementType {
-	UNKNOWN = 0,
-	ACCOUNT_RESTRICTION = 1,
-	SPAM = 2
+	DEFAULT = 0,
+	BLOCKING = 1,
+	SOFT = 2
 }
 
 export enum ReachoutTimelockReason {

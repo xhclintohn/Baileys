@@ -4,6 +4,7 @@ import { proto } from '../../WAProto/index.js';
 import type { MessageReceiptType, MessageRelayOptions, SocketConfig, WAMessage, WAMessageKey } from '../Types/index.js';
 import { type BinaryNode } from '../WABinary/index.js';
 export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
+    sendArticleCard: (jid: string, card: import("../Types").ArticleCardOptions) => Promise<string | WAMessage | undefined>;
     sendMessageAck: (node: BinaryNode, errorCode?: number) => Promise<void>;
     sendRetryRequest: (node: BinaryNode, forceIncludeKeys?: boolean) => Promise<void>;
     rejectCall: (callId: string, callFrom: string) => Promise<void>;
@@ -22,6 +23,8 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
         [_: string]: string;
     }>;
     sendPeerDataOperationMessage: (pdoMessage: proto.Message.IPeerDataOperationRequestMessage) => Promise<string>;
+    sendPeerMessage: (protocolMessage: proto.IMessage['protocolMessage']) => Promise<string>;
+    requestAppStateSyncKey: (keyIds: string[]) => Promise<string>;
     createParticipantNodes: (recipientJids: string[], message: proto.IMessage, extraAttrs?: BinaryNode["attrs"], dsmMessage?: proto.IMessage) => Promise<{
         nodes: BinaryNode[];
         shouldIncludeDeviceIdentity: boolean;
@@ -32,6 +35,18 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     updateMemberLabel: (jid: string, memberLabel: string) => Promise<string>;
     toxicHandler: import("./groupStatus.js").ToxicHandler;
     sendStatusMention: (content: Record<string, any>, jids?: string[]) => Promise<WAMessage>;
+    getPNForLID: (lid: string) => Promise<string | null>;
+    getPNsForLIDs: (lids: string[]) => Promise<import("../Types").LIDMapping[] | null>;
+    getLIDForPN: (pn: string) => Promise<string | null>;
+    getLIDsForPNs: (pns: string[]) => Promise<import("../Types").LIDMapping[] | null>;
+    deleteMessage: (jid: string, key: WAMessageKey) => Promise<WAMessage>;
+    requestPayment: (jid: string, options: import("../Types").RequestPaymentOptions) => Promise<import("../Types").PaymentResult>;
+    sendPayment: (jid: string, options: import("../Types").SendPaymentOptions) => Promise<import("../Types").PaymentResult>;
+    declinePaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
+    cancelPaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
+    sendPaymentInvite: (jid: string, options?: import("../Types").PaymentInviteOptions) => Promise<import("../Types").PaymentResult>;
+    sendStickerPack: (jid: string, pack: import("../Types").StickerPack) => Promise<import("../Types").StickerPackResult>;
+    sendChannelStatus: (jid: string, content: import("../Types").AnyMessageContent, options?: import("./channelStatus.js").ChannelStatusOptions) => Promise<import("./channelStatus.js").ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: import("../Types").AnyMessageContent, options?: import("../Types").MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;
     newsletterCreate: (name: string, description?: string) => Promise<import("../Types").NewsletterMetadata>;
@@ -116,10 +131,7 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     fetchBlocklist: () => Promise<(string | undefined)[]>;
     fetchStatus: (...jids: string[]) => Promise<import("../index.js").USyncQueryResultList[] | undefined>;
     fetchDisappearingDuration: (...jids: string[]) => Promise<import("../index.js").USyncQueryResultList[] | undefined>;
-    updateProfilePicture: (jid: string, content: import("../Types").WAMediaUpload, dimensions?: {
-        width: number;
-        height: number;
-    }) => Promise<void>;
+    updateProfilePicture: (jid: string, content: import("../Types").WAMediaUpload, options?: import("../Utils").ProfilePictureOptions) => Promise<void>;
     removeProfilePicture: (jid: string) => Promise<void>;
     updateProfileStatus: (status: string) => Promise<void>;
     updateProfileName: (name: string) => Promise<void>;
@@ -137,6 +149,10 @@ export declare const makeMessagesRecvSocket: (config: SocketConfig) => {
     getBusinessProfile: (jid: string) => Promise<import("../Types").WABusinessProfile | void>;
     resyncAppState: (collections: readonly ("critical_unblock_low" | "regular_high" | "regular_low" | "critical_block" | "regular")[], isInitialSync: boolean) => Promise<void>;
     chatModify: (mod: import("../Types").ChatModification, jid: string) => Promise<void>;
+    clearChat: (jid: string, lastMessages: any[], options?: {
+        deleteStarred?: boolean;
+    }) => Promise<void>;
+    deleteMessageForMe: (jid: string, key: WAMessageKey, timestamp: number, deleteMedia?: boolean) => Promise<void>;
     cleanDirtyBits: (type: "account_sync" | "groups", fromTimestamp?: number | string) => Promise<void>;
     addOrEditContact: (jid: string, contact: proto.SyncActionValue.IContactAction) => Promise<void>;
     removeContact: (jid: string) => Promise<void>;

@@ -7,7 +7,7 @@ import type { Agent } from 'https'
 import type { IAudioMetadata } from 'music-metadata'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { Readable, Transform } from 'stream'
+import { pipeline, Readable, Transform } from 'stream'
 import { URL } from 'url'
 import { proto } from '../../WAProto/index.js'
 import { DEFAULT_ORIGIN, MEDIA_HKDF_KEY_MAPPING, MEDIA_PATH_MAP, NEWSLETTER_MEDIA_PATH_MAP, type MediaType } from '../Defaults'
@@ -146,14 +146,14 @@ export const extractImageThumb = async (bufferOrFilePath: Readable | Buffer | st
 				height: dimensions.height
 			}
 		}
-	} else if ('jimp' in lib && typeof lib.jimp?.Jimp === 'object') {
-		const jimp = await (lib.jimp.Jimp as any).read(bufferOrFilePath)
+	} else if ('jimp' in lib && typeof (lib.jimp as any)?.Jimp === 'object') {
+		const jimp = await (lib.jimp as any).Jimp.read(bufferOrFilePath)
 		const dimensions = {
 			width: jimp.width,
 			height: jimp.height
 		}
 		const buffer = await jimp
-			.resize({ w: width, mode: lib.jimp.ResizeStrategy.BILINEAR })
+			.resize({ w: width, mode: (lib.jimp as any).ResizeStrategy.BILINEAR })
 			.getBuffer('image/jpeg', { quality: 50 })
 		return {
 			buffer,
@@ -167,13 +167,15 @@ export const extractImageThumb = async (bufferOrFilePath: Readable | Buffer | st
 export const encodeBase64EncodedStringForUpload = (b64: string) =>
 	encodeURIComponent(b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/\=+$/, ''))
 
-export const generateProfilePicture = async (
-	mediaUpload: WAMediaUpload,
-	dimensions?: { width: number; height: number }
-) => {
-	let buffer: Buffer
+export type ProfilePictureOptions = {
+	width?: number
+	height?: number
+	full?: boolean
+	quality?: number
+}
 
-	const { width: w = 640, height: h = 640 } = dimensions || {}
+export const generateProfilePicture = async (mediaUpload: WAMediaUpload, options?: ProfilePictureOptions) => {
+	let buffer: Buffer
 
 	if (Buffer.isBuffer(mediaUpload)) {
 		buffer = mediaUpload
@@ -181,6 +183,54 @@ export const generateProfilePicture = async (
 		const { stream } = await getStream(mediaUpload)
 		buffer = await toBuffer(stream)
 	}
+
+	if (options?.full) {
+		const MAX_SIDE = 640
+		const quality = options.quality ?? 92
+		const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+		const lib = await getImageProcessingLibrary()
+		if ('sharp' in lib && typeof lib.sharp?.default === 'function') {
+			const meta = await lib.sharp.default(buffer).metadata()
+			const longest = Math.max(meta.width ?? 0, meta.height ?? 0)
+			if (isJpeg && longest <= MAX_SIDE) {
+				return { img: buffer }
+			}
+
+			let pipeline = lib.sharp.default(buffer)
+			if (longest > MAX_SIDE) {
+				pipeline = pipeline.resize(MAX_SIDE, MAX_SIDE, { fit: 'inside' })
+			}
+
+			return { img: await pipeline.jpeg({ quality }).toBuffer() }
+		} else if ('jimp' in lib) {
+			const mod: any = lib.jimp
+			const Jimp = mod?.default ?? mod
+			if (typeof Jimp?.read !== 'function') {
+				throw new Boom('No image processing library available')
+			}
+
+			const image = await Jimp.read(buffer)
+			const longest = Math.max(image.bitmap.width, image.bitmap.height)
+			if (isJpeg && longest <= MAX_SIDE) {
+				return { img: buffer }
+			}
+
+			if (longest > MAX_SIDE) {
+				if (image.bitmap.width >= image.bitmap.height) {
+					image.resize(MAX_SIDE, Jimp.AUTO)
+				} else {
+					image.resize(Jimp.AUTO, MAX_SIDE)
+				}
+			}
+
+			image.quality(quality)
+			return { img: await image.getBufferAsync(Jimp.MIME_JPEG) }
+		} else {
+			throw new Boom('No image processing library available')
+		}
+	}
+
+	const { width: w = 640, height: h = 640 } = options || {}
 
 	const lib = await getImageProcessingLibrary()
 	let img: Promise<Buffer>
@@ -192,14 +242,14 @@ export const generateProfilePicture = async (
 				quality: 50
 			})
 			.toBuffer()
-	} else if ('jimp' in lib && typeof lib.jimp?.Jimp === 'function') {
-		const jimp = await (lib.jimp.Jimp as any).read(buffer)
+	} else if ('jimp' in lib && typeof (lib.jimp as any)?.Jimp === 'function') {
+		const jimp = await (lib.jimp as any).Jimp.read(buffer)
 		const min = Math.min(jimp.width, jimp.height)
 		const x = Math.floor((jimp.width - min) / 2)
 		const y = Math.floor((jimp.height - min) / 2)
 		const cropped = jimp.crop({ x, y, w: min, h: min })
 
-		img = cropped.resize({ w, h, mode: lib.jimp.ResizeStrategy.BILINEAR }).getBuffer('image/jpeg', { quality: 50 })
+		img = cropped.resize({ w, h, mode: (lib.jimp as any).ResizeStrategy.BILINEAR }).getBuffer('image/jpeg', { quality: 50 })
 	} else {
 		throw new Boom('No image processing library available')
 	}
@@ -223,9 +273,9 @@ export async function getAudioDuration(buffer: Buffer | string | Readable) {
 	if (Buffer.isBuffer(buffer)) {
 		metadata = await musicMetadata.parseBuffer(buffer, undefined, options)
 	} else if (typeof buffer === 'string') {
-		metadata = await musicMetadata.parseFile(buffer, options)
+		metadata = await (musicMetadata as any).parseFile(buffer, options)
 	} else {
-		metadata = await musicMetadata.parseStream(buffer, undefined, options)
+		metadata = await (musicMetadata as any).parseStream(buffer, undefined, options)
 	}
 
 	return metadata.format.duration
@@ -367,18 +417,19 @@ type EncryptedStreamOptions = {
 	saveOriginalFileIfRequired?: boolean
 	logger?: ILogger
 	opts?: RequestInit
+	mediaKey?: Buffer
 }
 
 export const encryptedStream = async (
 	media: WAMediaUpload,
 	mediaType: MediaType,
-	{ logger, saveOriginalFileIfRequired, opts }: EncryptedStreamOptions = {}
+	{ logger, saveOriginalFileIfRequired, opts, mediaKey: providedMediaKey }: EncryptedStreamOptions = {}
 ) => {
 	const { stream, type } = await getStream(media, opts)
 
 	logger?.debug('fetched media stream')
 
-	const mediaKey = Crypto.randomBytes(32)
+	const mediaKey = providedMediaKey ?? Crypto.randomBytes(32)
 	const { cipherKey, iv, macKey } = await getMediaKeys(mediaKey, mediaType)
 
 	const encFilePath = join(getTmpFilesDirectory(), mediaType + generateMessageIDV2() + '-enc')
@@ -499,10 +550,14 @@ export type MediaDownloadOptions = {
 
 export const getUrlFromDirectPath = (directPath: string, host: string = DEF_HOST) => `https://${host}${directPath}`
 
+const PLACEHOLDER_MEDIA_HOST = 'a.whatsapp.net'
+
 const extractHost = (url: string | null | undefined): string | undefined => {
 	if (!url) return undefined
 	try {
-		return new URL(url).host
+		const host = new URL(url).host
+
+		return host === PLACEHOLDER_MEDIA_HOST ? undefined : host
 	} catch {
 		return undefined
 	}
@@ -619,7 +674,9 @@ export const downloadEncryptedContent = async (
 			}
 		}
 	})
-	return fetched.pipe(output, { end: true })
+	pipeline(fetched, output, () => {})
+
+	return output
 }
 
 export function extensionForMediaMessage(message: WAMessageContent) {

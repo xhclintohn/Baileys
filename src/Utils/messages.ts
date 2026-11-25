@@ -1,5 +1,5 @@
 import { Boom } from '@hapi/boom'
-import { randomBytes } from 'crypto'
+import { randomBytes, randomUUID } from 'crypto'
 import { promises as fs } from 'fs'
 import { type Transform } from 'stream'
 import { proto } from '../../WAProto/index.js'
@@ -63,6 +63,11 @@ type MediaUploadData = {
 	height?: number
 	waveform?: Uint8Array
 	backgroundArgb?: number
+	isAnimated?: boolean
+	isAiSticker?: boolean
+	isAvatar?: boolean
+	isLottie?: boolean
+	accessibilityLabel?: string
 }
 
 const MIMETYPE_MAP: { [T in MediaType]?: string } = {
@@ -98,6 +103,19 @@ export const generateLinkPreviewIfRequired = async (
 			logger?.warn({ trace: error.stack }, 'url generation failed')
 		}
 	}
+}
+
+const applyStickerFlags = (message: proto.Message, uploadData: MediaUploadData) => {
+	const sticker = message.stickerMessage
+	if (!sticker) return message
+
+	if (typeof uploadData.isAiSticker === 'boolean') sticker.isAiSticker = uploadData.isAiSticker
+	if (typeof uploadData.isAvatar === 'boolean') sticker.isAvatar = uploadData.isAvatar
+	if (typeof uploadData.isLottie === 'boolean') sticker.isLottie = uploadData.isLottie
+	if (typeof uploadData.accessibilityLabel === 'string') sticker.accessibilityLabel = uploadData.accessibilityLabel
+	sticker.stickerSentTs ||= Date.now()
+
+	return message
 }
 
 const assertColor = async (color: any) => {
@@ -162,7 +180,7 @@ export const prepareWAMessageMedia = async (
 
 			Object.assign(obj[key as keyof proto.Message]!, { ...uploadData, media: undefined })
 
-			return obj
+			return applyStickerFlags(obj, uploadData)
 		}
 	}
 
@@ -225,7 +243,7 @@ export const prepareWAMessageMedia = async (
 			await options.mediaCache!.set(cacheableKey, WAProto.Message.encode(obj).finish())
 		}
 
-		return obj
+		return applyStickerFlags(obj, uploadData)
 	}
 
 	const requiresDurationComputation = mediaType === 'audio' && typeof uploadData.seconds === 'undefined'
@@ -329,7 +347,7 @@ export const prepareWAMessageMedia = async (
 		await options.mediaCache!.set(cacheableKey, WAProto.Message.encode(obj).finish())
 	}
 
-	return obj
+	return applyStickerFlags(obj, uploadData)
 }
 
 export const prepareDisappearingMessageSettingContent = (ephemeralExpiration?: number) => {
@@ -581,6 +599,22 @@ export const generateWAMessageContent = async (
 				m.pollCreationMessage = pollCreationMessage
 			}
 		}
+	} else if (hasNonNullishProperty(message, 'pollAddOption')) {
+		if (!message.pollAddOption.option) {
+			throw new Boom('pollAddOption needs an option', { statusCode: 400 })
+		}
+
+		m.pollAddOptionMessage = {
+			pollCreationMessageKey: message.pollAddOption.pollCreationMessageKey,
+			addOption: {
+				optionName: message.pollAddOption.option,
+				optionHash: sha256(Buffer.from(message.pollAddOption.option)).toString()
+			}
+		}
+	} else if (hasNonNullishProperty(message, 'pollUpdateMessage')) {
+		m.pollUpdateMessage = message.pollUpdateMessage
+	} else if (hasNonNullishProperty(message, 'pollAddOptionMessage')) {
+		m.pollAddOptionMessage = message.pollAddOptionMessage
 	} else if (hasNonNullishProperty(message, 'album')) {
 		m.albumMessage = {
 			expectedImageCount: message.album.expectedImageCount,
@@ -998,6 +1032,14 @@ export const normalizeMessageContent = (content: WAMessageContent | null | undef
 	return content
 }
 
+export const isViewOnceMessage = (content: WAMessageContent | null | undefined) => {
+	const inner = content?.ephemeralMessage?.message ?? content
+
+	const wrapped = (inner?.viewOnceMessage || inner?.viewOnceMessageV2 || inner?.viewOnceMessageV2Extension)?.message
+
+	return !!(wrapped?.imageMessage || wrapped?.videoMessage || wrapped?.ptvMessage || wrapped?.audioMessage)
+}
+
 export const extractMessageContent = (content: WAMessageContent | undefined | null): WAMessageContent | undefined => {
 	const extractFromTemplateMessage = (
 		msg: proto.Message.TemplateMessage.IHydratedFourRowTemplate | proto.Message.IButtonsMessage
@@ -1273,4 +1315,181 @@ export const assertMediaContent = (content: proto.IMessage | null | undefined) =
 	}
 
 	return mediaContent
+}
+
+export type RichHtmlTab = {
+	id?: string
+	tab_header?: string
+	title?: string
+	html?: string
+	payload?: string
+	url?: string
+	trustedSources?: string[]
+}
+
+export type RichHtmlContent = {
+	html?: string
+	title?: string
+	tabHeader?: string
+	trustedSources?: string[]
+	tabs?: RichHtmlTab[]
+	url?: string
+	rich?: boolean
+	richHtml?: boolean
+	responseId?: string
+	contextInfo?: any
+	messageContextInfo?: any
+	botRenderingConfigMetadata?: any
+}
+
+const normalizeTrustedSources = (value: unknown): string[] => {
+	if (!Array.isArray(value)) {
+		return []
+	}
+	return value.filter((source): source is string => typeof source === 'string' && !!source.trim()).map(source => source.trim())
+}
+
+const buildRichHtmlSection = (html: string, trustedSources: unknown) => ({
+	__typename: 'GenAIUnifiedResponseSection',
+	view_model: {
+		__typename: 'GenAISingleLayoutViewModel',
+		primitive: {
+			__typename: 'FOAHtmlPrimitiveDemoDONOTUSE',
+			trusted_sources: normalizeTrustedSources(trustedSources),
+			payload: String(html).trim()
+		}
+	}
+})
+
+const buildRichHtmlTabSection = (html: string, trustedSources: unknown, url?: string) => ({
+	__typename: 'GenAIUnifiedResponseSection',
+	view_model: {
+		__typename: 'GenAISingleLayoutViewModel',
+		primitive: {
+			__typename: 'GenAIaeacdsnwHtmlPrimitive',
+			payload: String(html).trim(),
+			url: url || '',
+			trusted_sources: normalizeTrustedSources(trustedSources)
+		}
+	}
+})
+
+const buildRichHtmlScreen = (
+	html: string,
+	tabs: RichHtmlTab[] | undefined,
+	title: string,
+	tabHeader: string | undefined,
+	trustedSources: unknown,
+	url: string | undefined
+) => {
+	const validTabs = (Array.isArray(tabs) ? tabs : []).filter(tab => String(tab?.html ?? tab?.payload ?? '').trim())
+	const tabItems = validTabs.length ? validTabs : [{ id: 'tab_0', tab_header: tabHeader, html }]
+	const embeddedTabs = tabItems.map((tab, index) => {
+		const tabHtml = String(tab?.html ?? tab?.payload ?? html ?? '').trim()
+		return {
+			id: tab?.id || `tab_${index}`,
+			tab_header: tab?.tab_header || tab?.title || `HTML ${index + 1}`,
+			sections: [buildRichHtmlTabSection(tabHtml, tab?.trustedSources || trustedSources, tab?.url || url)],
+			step_entries: []
+		}
+	}).filter(tab => tab.sections[0]!.view_model.primitive.payload)
+	return {
+		title,
+		embeddedScreen: {
+			title,
+			content: [{
+				__typename: 'FOAIDNixelButtonSheets',
+				tabs: embeddedTabs
+			}]
+		}
+	}
+}
+
+export const BOT_HTML_RENDERING_CONFIG = {
+	bloksVersioningId: '0903aa5f7f47de66789d5f4c86d3bd6e05e4bc3ff85e454a9f907d5ed7fef97c',
+	pixelDensity: 2.75
+}
+
+export const generateBotHtmlResponse = (content: string | RichHtmlContent, options: Record<string, any> = {}) => {
+	const input: Record<string, any> = typeof content === 'object' && content !== null && !Array.isArray(content)
+		? { ...options, ...content }
+		: { ...options, html: content }
+	const htmlPayload = typeof input.html === 'string' ? input.html.trim() : ''
+	const hasTabs = Array.isArray(input.tabs) && input.tabs.some(tab => String(tab?.html ?? tab?.payload ?? '').trim())
+	if (!htmlPayload && !hasTabs) {
+		throw new Boom('bot HTML responses require non-empty HTML content', { statusCode: 400 })
+	}
+	const responseId = input.responseId || randomUUID()
+	const title = String(input.title || 'Preview')
+	const rich = hasTabs || input.rich === true || input.richHtml === true
+	let payload: Record<string, any>
+	let submessages: any[] = []
+	if (rich) {
+		const { embeddedScreen } = buildRichHtmlScreen(htmlPayload, input.tabs, title, input.tabHeader, input.trustedSources, input.url)
+		payload = {
+			__typename: 'GenAIUnifiedResponse',
+			response_id: responseId,
+			sections: [{
+				__typename: 'GenAIUnifiedResponseSection',
+				view_model: {
+					__typename: 'GenAISingleLayoutViewModel',
+					primitive: {
+						__typename: 'GenAIMarkdownTextUXPrimitive',
+						text: `> ${title}`
+					}
+				}
+			}],
+			embedded_screens: [embeddedScreen]
+		}
+		submessages = [{ messageType: 1, messageText: `> ${title}` }]
+	} else {
+		payload = {
+			__typename: 'GenAIUnifiedResponse',
+			response_id: responseId,
+			sections: [buildRichHtmlSection(htmlPayload, input.trustedSources)]
+		}
+	}
+	const existingBotMetadata = input.messageContextInfo?.botMetadata || {}
+	return {
+		messageContextInfo: {
+			...input.messageContextInfo,
+			botMetadata: {
+				pluginMetadata: {},
+				...existingBotMetadata,
+				botRenderingConfigMetadata: input.botRenderingConfigMetadata || existingBotMetadata.botRenderingConfigMetadata || BOT_HTML_RENDERING_CONFIG
+			}
+		},
+		botForwardedMessage: {
+			message: {
+				richResponseMessage: {
+					submessages,
+					messageType: 1,
+					unifiedResponse: {
+						data: Buffer.from(JSON.stringify(payload)).toString('base64')
+					}
+				}
+			}
+		}
+	}
+}
+
+export const applyBotForwardedWrapper = (message: any) => {
+	if (message?.deviceSentMessage?.message) {
+		message.deviceSentMessage.message = applyBotForwardedWrapper(message.deviceSentMessage.message)
+		return message
+	}
+	const rich = message?.botForwardedMessage?.message?.richResponseMessage || message?.richResponseMessage
+	if (!rich) {
+		return message
+	}
+	rich.contextInfo = {
+		...rich.contextInfo,
+		isForwarded: true,
+		forwardOrigin: 4
+	}
+	return message.botForwardedMessage ? message : {
+		botForwardedMessage: {
+			message
+		}
+	}
 }

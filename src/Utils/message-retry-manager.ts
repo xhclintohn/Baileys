@@ -194,6 +194,16 @@ export class MessageRetryManager {
 		return this.retryCounters.get(messageId) || 0
 	}
 
+	restoreRetryCount(messageId: string, retryCount: number): void {
+		if (!Number.isFinite(retryCount)) {
+			retryCount = this.maxMsgRetryCount
+		}
+
+		if (retryCount > this.getRetryCount(messageId)) {
+			this.retryCounters.set(messageId, retryCount)
+		}
+	}
+
 	hasExceededMaxRetries(messageId: string): boolean {
 		return this.getRetryCount(messageId) >= this.maxMsgRetryCount
 	}

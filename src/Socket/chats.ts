@@ -15,6 +15,7 @@ import type {
 	WABusinessProfile,
 	WAMediaUpload,
 	WAMessage,
+	WAMessageKey,
 	WAPatchCreate,
 	WAPatchName,
 	WAPresence,
@@ -39,6 +40,7 @@ import {
 	ensureLTHashStateVersion,
 	extractSyncdPatches,
 	generateProfilePicture,
+	type ProfilePictureOptions,
 	getHistoryMsg,
 	isAppStateSyncIrrecoverable,
 	isMissingKeyError,
@@ -382,11 +384,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		}
 	}
 
-	const updateProfilePicture = async (
-		jid: string,
-		content: WAMediaUpload,
-		dimensions?: { width: number; height: number }
-	) => {
+	const updateProfilePicture = async (jid: string, content: WAMediaUpload, options?: ProfilePictureOptions) => {
 		let targetJid
 		if (!jid) {
 			throw new Boom(
@@ -400,7 +398,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 			targetJid = undefined
 		}
 
-		const { img } = await generateProfilePicture(content, dimensions)
+		const { img } = await generateProfilePicture(content, options)
 		await query({
 			tag: 'iq',
 			attrs: {
@@ -1219,8 +1217,12 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		return chatModify({ archive, lastMessages }, jid)
 	}
 
-	const clearChat = (jid: string, lastMessages: any[]) => {
-		return chatModify({ clear: true, lastMessages }, jid)
+	const clearChat = (jid: string, lastMessages: any[], options?: { deleteStarred?: boolean }) => {
+		return chatModify({ clear: true, lastMessages, deleteStarred: options?.deleteStarred }, jid)
+	}
+
+	const deleteMessageForMe = (jid: string, key: WAMessageKey, timestamp: number, deleteMedia = false) => {
+		return chatModify({ deleteForMe: { deleteMedia, key, timestamp } }, jid)
 	}
 
 	const deleteChat = (jid: string, lastMessages: any[]) => {
@@ -1542,6 +1544,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		chatModify,
 		archiveChat,
 		clearChat,
+		deleteMessageForMe,
 		deleteChat,
 		pinChat,
 		muteChat,

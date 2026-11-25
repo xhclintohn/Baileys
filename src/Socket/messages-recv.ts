@@ -3,16 +3,12 @@ import { Boom } from '@hapi/boom'
 import { randomBytes } from 'crypto'
 import Long from 'long'
 import { proto } from '../../WAProto/index.js'
-import {
-        DEFAULT_CACHE_TTLS,
-        KEY_BUNDLE_TYPE,
-        MIN_PREKEY_COUNT,
-        PLACEHOLDER_MAX_AGE_SECONDS,
-        STATUS_EXPIRY_SECONDS
-} from '../Defaults'
+import { DEFAULT_CACHE_TTLS, KEY_BUNDLE_TYPE, PLACEHOLDER_MAX_AGE_SECONDS, STATUS_EXPIRY_SECONDS } from '../Defaults'
 import type {
+        CacheStore,
         GroupParticipant,
         MessageReceiptType,
+        ArticleCardOptions,
         MessageRelayOptions,
         MessageUserReceipt,
         NewChatMessageCapInfo,
@@ -43,6 +39,7 @@ import {
         getNextPreKeys,
         getStatusFromReceiptType,
         handleIdentityChange,
+        handleServerEncryptNotification,
         hkdf,
         MISSING_KEYS_ERROR_TEXT,
         NACK_REASONS,
@@ -85,6 +82,7 @@ import {
         type JidWithDevice,
         S_WHATSAPP_NET
 } from '../WABinary'
+import { decodeChannelStatus } from './channelStatus'
 import { extractGroupMetadata } from './groups'
 import { makeMessagesSocket } from './messages-send'
 
@@ -118,7 +116,7 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                 userDevicesCache,
                 devicesMutex,
                 offlineResume
-        } = sock
+        } = sock as typeof sock & { placeholderResendCache: CacheStore }
 
         const getLIDForPN = signalRepository.lidMapping.getLIDForPN.bind(signalRepository.lidMapping)
 
@@ -130,6 +128,17 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                         stdTTL: DEFAULT_CACHE_TTLS.MSG_RETRY,
                         useClones: false
                 })
+
+        const getRetryCount = async (key: string, defaultValue: number) => {
+                const retryCount = await msgRetryCache.get<number>(key)
+
+                if (retryCount === undefined || retryCount === null) {
+                        return defaultValue
+                }
+
+                return Number.isFinite(retryCount) ? retryCount : maxMsgRetryCount
+        }
+
         const callOfferCache =
                 config.callOfferCache ||
                 new NodeCache<WACallEvent>({
@@ -219,9 +228,9 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                 time_enforcement_ends?: string
         }
 
-        const ENFORCEMENT_TYPE_VALUES = new Set<string>(Object.values(ReachoutTimelockEnforcementType))
+        const ENFORCEMENT_TYPE_VALUES = new Set(Object.values(ReachoutTimelockEnforcementType))
 
-        function isValidEnforcementType(value: string | undefined): value is ReachoutTimelockEnforcementType {
+        function isValidEnforcementType(value: string | undefined): value is string {
                 return typeof value === 'string' && ENFORCEMENT_TYPE_VALUES.has(value)
         }
 
@@ -610,6 +619,12 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                 const msgId = msgKey.id!
 
                 if (messageRetryManager) {
+                        const key = `${msgId}:${msgKey?.participant}`
+
+                        const cachedRetryCount = await getRetryCount(key, 0)
+
+                        messageRetryManager.restoreRetryCount(msgId, cachedRetryCount)
+
                         if (messageRetryManager.hasExceededMaxRetries(msgId)) {
                                 logger.debug({ msgId }, 'reached retry limit with new retry manager, clearing')
                                 messageRetryManager.markRetryFailed(msgId)
@@ -618,14 +633,12 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 
                         const retryCount = messageRetryManager.incrementRetryCount(msgId)
 
-                        const key = `${msgId}:${msgKey?.participant}`
                         await msgRetryCache.set(key, retryCount)
                 } else {
                         const key = `${msgId}:${msgKey?.participant}`
-                        let retryCount = (await msgRetryCache.get<number>(key)) || 0
+                        let retryCount = await getRetryCount(key, 0)
                         if (retryCount >= maxMsgRetryCount) {
                                 logger.debug({ retryCount, msgId }, 'reached retry limit, clearing')
-                                await msgRetryCache.del(key)
                                 return
                         }
 
@@ -780,24 +793,7 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
         const handleEncryptNotification = async (node: BinaryNode) => {
                 const from = node.attrs.from
                 if (from === S_WHATSAPP_NET) {
-                        const stanzaId = node.attrs.id
-                        if (stanzaId && inFlightPreKeyLow.has(stanzaId)) {
-                                return
-                        }
-
-                        const countChild = getBinaryNodeChild(node, 'count')
-                        const count = +countChild!.attrs.value!
-                        const shouldUploadMorePreKeys = count < MIN_PREKEY_COUNT
-
-                        logger.debug({ count, shouldUploadMorePreKeys }, 'recv pre-key count')
-                        if (shouldUploadMorePreKeys) {
-                                if (stanzaId) inFlightPreKeyLow.add(stanzaId)
-                                try {
-                                        await uploadPreKeys()
-                                } finally {
-                                        if (stanzaId) inFlightPreKeyLow.delete(stanzaId)
-                                }
-                        }
+                        await handleServerEncryptNotification(node, { query, uploadPreKeys, inFlightPreKeyLow, logger })
                 } else {
                         const result = await handleIdentityChange(node, {
                                 meId: authState.creds.me?.id,
@@ -1299,13 +1295,13 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 
         const willSendMessageAgain = async (id: string, participant: string) => {
                 const key = `${id}:${participant}`
-                const retryCount = (await msgRetryCache.get<number>(key)) || 0
+                const retryCount = await getRetryCount(key, 0)
                 return retryCount < maxMsgRetryCount
         }
 
         const updateSendMessageAgainCount = async (id: string, participant: string) => {
                 const key = `${id}:${participant}`
-                const newValue = ((await msgRetryCache.get<number>(key)) || 0) + 1
+                const newValue = (await getRetryCount(key, 0)) + 1
                 await msgRetryCache.set(key, newValue)
         }
 
@@ -1934,12 +1930,29 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
                 }
         }
 
+        const handleChannelStatus = async (node: BinaryNode) => {
+                const status = decodeChannelStatus(node)
+                if (!status) {
+                        try {
+                                await sendMessageAck(node)
+                        } catch (error) {
+                                onUnexpectedError(error as Error, 'acking status stanza')
+                        }
+                        return
+                }
+
+                ev.buffer()
+                ev.emit('newsletter.status', status)
+                ev.flush()
+        }
+
         const offlineNodeProcessor = makeOfflineNodeProcessor(
                 new Map<MessageType, (node: BinaryNode) => Promise<void>>([
                         ['message', handleMessage],
                         ['call', handleCall],
                         ['receipt', handleReceipt],
-                        ['notification', handleNotification]
+                        ['notification', handleNotification],
+                        ['status', handleChannelStatus]
                 ]),
                 {
                         isWsOpen: () => ws.isOpen,
@@ -2001,8 +2014,8 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
         // Some accounts now get contacts' statuses as a top-level <status> stanza
         // instead of <message from="status@broadcast">. It isn't decoded here, but it
         // must be acked: the server ends the stream about 50 minutes later otherwise.
-        ws.on('CB:status', (node: BinaryNode) => {
-                sendMessageAck(node).catch(error => onUnexpectedError(error, 'acking status'))
+        ws.on('CB:status', async (node: BinaryNode) => {
+                await handleChannelStatus(node).catch(error => onUnexpectedError(error, 'handling channel status'))
         })
 
         ws.on('CB:ack,class:message', (node: BinaryNode) => {
@@ -2132,6 +2145,22 @@ export const makeMessagesRecvSocket = (config: SocketConfig) => {
 
         return {
                 ...sock,
+                sendArticleCard: (jid: string, card: ArticleCardOptions) =>
+                        sock.sendMessage(jid, {
+                                text: card.text ?? '',
+                                contextInfo: {
+                                        externalAdReply: {
+                                                title: card.title,
+                                                body: card.body,
+                                                mediaType: card.mediaType ?? proto.ContextInfo.ExternalAdReplyInfo.MediaType.IMAGE,
+                                                thumbnailUrl: card.thumbnailUrl,
+                                                sourceUrl: card.url,
+                                                containsAutoReply: card.containsAutoReply,
+                                                renderLargerThumbnail: card.renderLargerThumbnail,
+                                                showAdAttribution: card.showAdAttribution
+                                        }
+                                }
+                        }),
                 sendMessageAck,
                 sendRetryRequest,
                 rejectCall,

@@ -33,7 +33,7 @@ export declare enum ReachoutTimelockEnforcementType {
 export type ReachoutTimelockState = {
     isActive: boolean;
     timeEnforcementEnds?: Date;
-    enforcementType?: ReachoutTimelockEnforcementType;
+    enforcementType?: ReachoutTimelockEnforcementType | string;
 };
 export declare enum NewChatMessageCappingStatusType {
     ACTIVE = "ACTIVE",

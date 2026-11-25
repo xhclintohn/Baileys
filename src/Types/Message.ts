@@ -136,6 +136,11 @@ export type PollMessageOptions = {
         toAnnouncementGroup?: boolean
 }
 
+export type PollAddOptionOptions = {
+        pollCreationMessageKey: WAMessageKey
+        option: string
+}
+
 export type EventMessageOptions = {
         name: string
         description?: string
@@ -147,6 +152,18 @@ export type EventMessageOptions = {
         isScheduleCall?: boolean
         extraGuestsAllowed?: boolean
         messageSecret?: Uint8Array<ArrayBufferLike>
+}
+
+export type ArticleCardOptions = {
+        text?: string
+        title: string
+        body?: string
+        url: string
+        thumbnailUrl?: string
+        mediaType?: proto.ContextInfo.ExternalAdReplyInfo.MediaType
+        containsAutoReply?: boolean
+        renderLargerThumbnail?: boolean
+        showAdAttribution?: boolean
 }
 
 export type AlbumMessageOptions = {
@@ -187,6 +204,10 @@ export type AnyMediaMessageContent = (
         | ({
                         sticker: WAMediaUpload
                         isAnimated?: boolean
+                        isAiSticker?: boolean
+                        isAvatar?: boolean
+                        isLottie?: boolean
+                        accessibilityLabel?: string
           } & WithDimensions)
         | ({
                         document: WAMediaUpload
@@ -341,6 +362,15 @@ export type AnyRegularMessageContent = (
           } & Mentionable &
                         Contextable &
                         Editable)
+        | {
+                        pollAddOption: PollAddOptionOptions
+          }
+        | {
+                        pollUpdateMessage: proto.Message.IPollUpdateMessage
+          }
+        | {
+                        pollAddOptionMessage: proto.Message.IPollAddOptionMessage
+          }
         | ({
                         album: AlbumMessageOptions
           } & Contextable &
@@ -416,6 +446,7 @@ type MinimalRelayOptions = {
 }
 
 export type MessageRelayOptions = MinimalRelayOptions & {
+        quoted?: WAMessage
         participant?: { jid: string; count: number }
         additionalAttributes?: { [_: string]: string }
         additionalNodes?: BinaryNode[]
@@ -427,6 +458,7 @@ export type MessageRelayOptions = MinimalRelayOptions & {
 }
 
 export type MiscMessageGenerationOptions = MinimalRelayOptions & {
+        logger?: ILogger
         timestamp?: Date
         quoted?: WAMessage
         ephemeralExpiration?: number | string
@@ -437,7 +469,7 @@ export type MiscMessageGenerationOptions = MinimalRelayOptions & {
         broadcast?: boolean
 }
 export type MessageGenerationOptionsFromContent = MiscMessageGenerationOptions & {
-        userJid: string
+        userJid?: string
 }
 
 export type WAMediaUploadFunction = (

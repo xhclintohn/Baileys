@@ -10,7 +10,12 @@ export * from './Product'
 export * from './Call'
 export * from './Signal'
 export * from './Newsletter'
+export * from './ChannelStatus'
+export * from './Payment'
+export * from './StickerPack'
 export * from './Mex'
+
+export type { NewsletterCreateResponse, NewsletterMetadata, NewsletterUpdate, NewsletterViewRole } from './Newsletter'
 
 import type { AuthenticationState } from './Auth'
 import type { SocketConfig } from './Socket'

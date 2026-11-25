@@ -1,8 +1,8 @@
 import type { KeyPair } from '../Types/index.js';
 export declare function md5(buffer: Buffer | Uint8Array): Buffer;
 export declare function hkdf(buffer: Uint8Array | Buffer, expandedLength: number, info?: {
-    salt?: Buffer;
-    info?: string;
+    salt?: Buffer | Uint8Array;
+    info?: string | Buffer | Uint8Array;
 }): Buffer;
 export declare const generateSignalPubKey: (pubKey: Uint8Array | Buffer) => any;
 export declare const Curve: {

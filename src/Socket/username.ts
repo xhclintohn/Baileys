@@ -11,7 +11,14 @@ export const USERNAME_QUERY_IDS = {
 	GET: '32618050064506055',
 	GET_RECOMMENDATIONS: '26077456248616957',
 	PIN_SET: '25529696019976770'
-} as const
+}
+
+export type UsernameQueryIds = typeof USERNAME_QUERY_IDS
+
+export const setUsernameQueryIds = (ids: Partial<UsernameQueryIds>) => {
+	Object.assign(USERNAME_QUERY_IDS, ids)
+	return USERNAME_QUERY_IDS
+}
 
 export const USERNAME_CHECK_RESULT = {
 	SUCCESS: 'SUCCESS',
@@ -156,6 +163,7 @@ export const makeUsernameSocket = (config: SocketConfig) => {
 		setUsernamePin,
 		findUserByUsername,
 		fetchContactUsernames,
+		setUsernameQueryIds,
 		USERNAME_QUERY_IDS,
 		USERNAME_CHECK_RESULT,
 		USERNAME_SOURCE

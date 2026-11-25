@@ -10,7 +10,7 @@ export function md5(buffer: Buffer | Uint8Array) {
 export function hkdf(
 	buffer: Uint8Array | Buffer,
 	expandedLength: number,
-	info: { salt?: Buffer; info?: string } = {}
+	info: { salt?: Buffer | Uint8Array; info?: string | Buffer | Uint8Array } = {}
 ): Buffer {
 	const salt = info.salt ? Buffer.from(info.salt) : Buffer.alloc(0)
 	const infoBuf = info.info ? Buffer.from(info.info) : Buffer.alloc(0)

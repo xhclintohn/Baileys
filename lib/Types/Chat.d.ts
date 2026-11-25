@@ -54,6 +54,7 @@ export type ChatModification = {
 } | {
     clear: boolean;
     lastMessages: LastMessageList;
+    deleteStarred?: boolean;
 } | {
     deleteForMe: {
         deleteMedia: boolean;

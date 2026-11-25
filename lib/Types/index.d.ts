@@ -10,7 +10,11 @@ export * from './Product.js';
 export * from './Call.js';
 export * from './Signal.js';
 export * from './Newsletter.js';
+export * from './ChannelStatus.js';
+export * from './Payment.js';
+export * from './StickerPack.js';
 export * from './Mex.js';
+export type { NewsletterCreateResponse, NewsletterMetadata, NewsletterUpdate, NewsletterViewRole } from './Newsletter.js';
 import type { AuthenticationState } from './Auth.js';
 import type { SocketConfig } from './Socket.js';
 export type UserFacingSocketConfig = Partial<SocketConfig> & {

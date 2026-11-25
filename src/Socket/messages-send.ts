@@ -9,12 +9,18 @@ import type {
         MessageReceiptType,
         MessageRelayOptions,
         MiscMessageGenerationOptions,
+        PaymentInviteOptions,
+        StickerPack,
+        RequestPaymentOptions,
+        SendPaymentOptions,
         SocketConfig,
         WAMessage,
         WAMessageKey
 } from '../Types'
 import {
         aggregateMessageKeysNotFromMe,
+        applyBotForwardedWrapper,
+        assertMeId,
         assertMediaContent,
         bindWaitForEvent,
         decryptMediaRetryData,
@@ -22,20 +28,25 @@ import {
         encodeSignedDeviceIdentity,
         encodeWAMessage,
         encryptMediaRetryRequest,
+        encryptPollVote,
         extractDeviceJids,
+        generateBotHtmlResponse,
         generateMessageID,
         generateMessageIDV2,
         generateParticipantHashV2,
         generateWAMessage,
         generateWAMessageContent,
         generateWAMessageFromContent,
+        getKeyAuthor,
         getStatusCodeForMediaRetry,
         getUrlFromDirectPath,
         getWAUploadToServer,
+        isViewOnceMessage,
         MessageRetryManager,
         normalizeMessageContent,
         parseAndInjectE2ESessions,
         prepareWAMessageMedia,
+        sha256,
         unixTimestampSeconds
 } from '../Utils'
 import { getUrlInfo } from '../Utils/link-preview'
@@ -71,8 +82,17 @@ import {
         S_WHATSAPP_NET
 } from '../WABinary'
 import { USyncQuery, USyncUser } from '../WAUSync'
+import { type ChannelStatusOptions, sendChannelStatus } from './channelStatus.js'
+import {
+	cancelPaymentRequest,
+	declinePaymentRequest,
+	requestPayment,
+	sendPayment,
+	sendPaymentInvite
+} from './payment.js'
+import { sendStickerPack } from './stickerPack.js'
 import { makeUsernameSocket } from './username'
-import { ToxicHandler } from './groupStatus.js'
+import { ToxicHandler, type GroupStatusOptions, sendGroupStatus } from './groupStatus.js'
 
 export const makeMessagesSocket = (config: SocketConfig) => {
         const {
@@ -83,7 +103,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 patchMessageBeforeSending,
                 cachedGroupMetadata,
                 enableRecentMessageCache,
-                maxMsgRetryCount
+                maxMsgRetryCount,
+                getMessage
         } = config
         const sock = makeUsernameSocket(config)
         const {
@@ -492,23 +513,14 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 return didFetchNewSession
         }
 
-        const sendPeerDataOperationMessage = async (
-                pdoMessage: proto.Message.IPeerDataOperationRequestMessage
-        ): Promise<string> => {
+        const sendPeerMessage = async (protocolMessage: proto.IMessage['protocolMessage']): Promise<string> => {
                 if (!authState.creds.me?.id) {
                         throw new Boom('Not authenticated')
                 }
 
-                const protocolMessage: proto.IMessage = {
-                        protocolMessage: {
-                                peerDataOperationRequestMessage: pdoMessage,
-                                type: proto.Message.ProtocolMessage.Type.PEER_DATA_OPERATION_REQUEST_MESSAGE
-                        }
-                }
-
                 const meJid = jidNormalizedUser(authState.creds.me.id)
 
-                const msgId = await relayMessage(meJid, protocolMessage, {
+                const msgId = await relayMessage(meJid, { protocolMessage }, {
                         additionalAttributes: {
                                 category: 'peer',
 
@@ -524,6 +536,32 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
                 return msgId
         }
+
+        const sendPeerDataOperationMessage = async (
+                pdoMessage: proto.Message.IPeerDataOperationRequestMessage
+        ): Promise<string> => {
+                return sendPeerMessage({
+                        peerDataOperationRequestMessage: pdoMessage,
+                        type: proto.Message.ProtocolMessage.Type.PEER_DATA_OPERATION_REQUEST_MESSAGE
+                })
+        }
+
+        const requestAppStateSyncKey = async (keyIds: string[]): Promise<string> => {
+                if (!keyIds?.length) {
+                        throw new Boom('At least one app state sync key ID is required', { statusCode: 400 })
+                }
+
+                const msgId = await sendPeerMessage({
+                        type: proto.Message.ProtocolMessage.Type.APP_STATE_SYNC_KEY_REQUEST,
+                        appStateSyncKeyRequest: {
+                                keyIds: keyIds.map(keyId => ({ keyId: Buffer.from(keyId, 'base64') }))
+                        }
+                })
+
+                logger.info({ keyIds, msgId }, 'requested app state sync keys from phone')
+                return msgId
+        }
+
 
         const createParticipantNodes = async (
                 recipientJids: string[],
@@ -654,6 +692,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 const devices: DeviceWithJid[] = []
                 let reportingMessage: proto.IMessage | undefined
 
+                message = applyBotForwardedWrapper(message)
+
                 const meMsg: proto.IMessage = {
                         deviceSentMessage: {
                                 destinationJid,
@@ -678,7 +718,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 }
 
                 await authState.keys.transaction(async () => {
-                        const mediaType = getMediaType(message)
+                        const mediaType = getMediaType(normalizeMessageContent(message) || message)
                         if (mediaType) {
                                 extraAttrs['mediatype'] = mediaType
                         }
@@ -706,7 +746,11 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                 return
                         }
 
-                        if (normalizeMessageContent(message)?.pinInChatMessage || normalizeMessageContent(message)?.reactionMessage) {
+                        if (
+                                normalizeMessageContent(message)?.pinInChatMessage ||
+                                normalizeMessageContent(message)?.reactionMessage ||
+                                normalizeMessageContent(message)?.pollUpdateMessage
+                        ) {
                                 extraAttrs['decrypt-fail'] = 'hide'
                         }
 
@@ -782,7 +826,6 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                                 device.device !== 99
                                         ) {
                                                 senderKeyRecipients.push(deviceJid)
-                                                senderKeyMap[deviceJid] = true
                                         }
                                 }
 
@@ -803,6 +846,12 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                         shouldIncludeDeviceIdentity = shouldIncludeDeviceIdentity || result.shouldIncludeDeviceIdentity
 
                                         participants.push(...result.nodes)
+
+                                        for (const { attrs } of result.nodes) {
+                                                if (attrs.jid) {
+                                                        senderKeyMap[attrs.jid] = true
+                                                }
+                                        }
                                 }
 
                                 binaryNodeContent.push({
@@ -969,6 +1018,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                         attrs: {
                                                 v: '2',
                                                 type,
+                                                ...extraAttrs,
                                                 count: participant!.count.toString()
                                         },
                                         content: encryptedContent
@@ -1024,6 +1074,10 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                 })
 
                                 logger.debug({ jid }, 'adding device identity')
+                        }
+
+                        if (isViewOnceMessage(message)) {
+                                ;(stanza.content as BinaryNode[]).push({ tag: 'meta', attrs: { view_once: 'true' } })
                         }
 
                         if (
@@ -1661,11 +1715,218 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 	}
 
 
+	const relayRichMessage = async (jid: string, fullMsg: WAMessage, options: any = {}) => {
+		const relayOptions = {
+			...options,
+			messageId: fullMsg.key.id,
+			useCachedGroupMetadata: options.useCachedGroupMetadata,
+			statusJidList: options.statusJidList,
+			...options.relayOptions
+		}
+		await relayMessage(jid, fullMsg.message!, relayOptions)
+		const richEnvelope = (fullMsg.message as any)?.botForwardedMessage?.message?.richResponseMessage
+		if (options.renderRichResponse !== false && richEnvelope) {
+			const editContent = proto.Message.fromObject({
+				botForwardedMessage: {
+					message: {
+						protocolMessage: {
+							key: {
+								remoteJid: jid,
+								fromMe: true,
+								id: fullMsg.key.id
+							},
+							type: proto.Message.ProtocolMessage.Type.MESSAGE_EDIT,
+							editedMessage: fullMsg.message
+						}
+					}
+				}
+			})
+			const editMessage = generateWAMessageFromContent(jid, editContent as any, {
+				logger,
+				userJid: authState.creds.me?.id,
+				messageId: generateMessageIDV2(authState.creds.me?.id || jid)
+			})
+			await relayMessage(jid, editMessage.message!, {
+				...relayOptions,
+				messageId: editMessage.key.id
+			})
+		}
+		return fullMsg
+	}
+
+	const sendRichHtml = async (jid: string, content: string | Record<string, any>, options: MiscMessageGenerationOptions = {}) => {
+		const richContent = typeof content === 'string' ? { html: content } : content
+		if (!richContent || typeof richContent !== 'object') {
+			throw new Boom('sendRichHtml requires HTML content or tabs', { statusCode: 400 })
+		}
+		const generated = generateBotHtmlResponse({
+			...richContent,
+			rich: true
+		}, options as any)
+		const waMsg = generateWAMessageFromContent(jid, generated as any, options as any)
+		await relayRichMessage(jid, waMsg, options)
+		return waMsg
+	}
+
+	const stickerPackDeps = {
+		relayMessage,
+		upload: waUploadToServer,
+		userJid: authState.creds.me?.id,
+		logger
+	}
+
+	const paymentDeps = {
+		relayMessage,
+		userJid: authState.creds.me?.id,
+		meJid: authState.creds.me?.id
+	}
+
+	const deleteMessage = async (jid: string, key: WAMessageKey) => {
+		const fullMsg = await generateWAMessage(
+			jid,
+			{ delete: key },
+			{
+				logger,
+				userJid: authState.creds.me!.id,
+				upload: waUploadToServer,
+				messageId: generateMessageIDV2(sock.user?.id)
+			}
+		)
+		await relayMessage(jid, fullMsg.message!, {
+			messageId: fullMsg.key.id!,
+			additionalAttributes: {
+				edit: isJidGroup(key.remoteJid as string) && !key.fromMe ? '8' : '7'
+			}
+		})
+		if (config.emitOwnEvents) {
+			process.nextTick(async () => {
+				await messageMutex.mutex(() => upsertMessage(fullMsg, 'append'))
+			})
+		}
+
+		return fullMsg
+	}
+
+	const pinMessage = async (
+		jid: string,
+		key: WAMessageKey,
+		duration: 86400 | 604800 | 2592000 = 86400
+	) => {
+		if (key.remoteJid && key.remoteJid !== jid) {
+			throw new Error(`refusing to pin message ${key.id}: it belongs to ${key.remoteJid}, not ${jid}`)
+		}
+		const found = typeof getMessage === 'function' ? await getMessage({ ...key, remoteJid: jid }) : undefined
+		if (!found) {
+			throw new Error(`refusing to pin message ${key.id} in ${jid}: message not found in this chat`)
+		}
+		const fullMsg = await generateWAMessage(
+			jid,
+			{ pin: key, type: proto.PinInChat.Type.PIN_FOR_ALL, time: duration },
+			{
+				logger,
+				userJid: authState.creds.me!.id,
+				upload: waUploadToServer,
+				messageId: generateMessageIDV2(sock.user?.id)
+			}
+		)
+		await relayMessage(jid, fullMsg.message!, { messageId: fullMsg.key.id! })
+		if (config.emitOwnEvents) {
+			process.nextTick(async () => {
+				await messageMutex.mutex(() => upsertMessage(fullMsg, 'append'))
+			})
+		}
+		return fullMsg
+	}
+
+	const unpinMessage = async (jid: string, key: WAMessageKey) => {
+		const fullMsg = await generateWAMessage(
+			jid,
+			{ pin: key, type: proto.PinInChat.Type.UNPIN_FOR_ALL },
+			{
+				logger,
+				userJid: authState.creds.me!.id,
+				upload: waUploadToServer,
+				messageId: generateMessageIDV2(sock.user?.id)
+			}
+		)
+		await relayMessage(jid, fullMsg.message!, { messageId: fullMsg.key.id! })
+		if (config.emitOwnEvents) {
+			process.nextTick(async () => {
+				await messageMutex.mutex(() => upsertMessage(fullMsg, 'append'))
+			})
+		}
+		return fullMsg
+	}
+
+	const sendPollVote = async (
+		jid: string,
+		pollCreationMessageKey: WAMessageKey,
+		options: string | string[],
+		pollInfo: { messageSecret: Uint8Array; creatorJid?: string }
+	) => {
+		const meIdNormalised = jidNormalizedUser(assertMeId(authState.creds))
+		const meLidNormalised = authState.creds.me?.lid ? jidNormalizedUser(authState.creds.me.lid) : null
+		const pollMsgId = pollCreationMessageKey.id
+		if (!pollMsgId) {
+			throw new Boom('pollCreationMessageKey needs an id', { statusCode: 400 })
+		}
+
+		const optionNames = Array.isArray(options) ? options : [options]
+		if (!optionNames.length) {
+			throw new Boom('sendPollVote needs at least one option', { statusCode: 400 })
+		}
+
+		const creatorJid = pollInfo.creatorJid || getKeyAuthor(pollCreationMessageKey, meIdNormalised)
+		const voterJid = (creatorJid.endsWith('@lid') || pollCreationMessageKey.participant?.endsWith('@lid') || pollCreationMessageKey.addressingMode === 'lid') && meLidNormalised
+			? meLidNormalised
+			: meIdNormalised
+
+		const vote = encryptPollVote(
+			{ selectedOptions: optionNames.map(name => sha256(Buffer.from(name))) },
+			{
+				pollCreatorJid: creatorJid,
+				pollMsgId,
+				pollEncKey: pollInfo.messageSecret,
+				voterJid
+			}
+		)
+
+		const fullMsg = await generateWAMessage(
+			jid,
+			{
+				pollUpdateMessage: {
+					pollCreationMessageKey,
+					vote,
+					senderTimestampMs: Date.now()
+				}
+			},
+			{
+				logger,
+				userJid: authState.creds.me!.id,
+				upload: waUploadToServer,
+				messageId: generateMessageIDV2(sock.user?.id)
+			}
+		)
+
+		await relayMessage(jid, fullMsg.message!, { messageId: fullMsg.key.id! })
+
+		if (config.emitOwnEvents) {
+			process.nextTick(async () => {
+				await messageMutex.mutex(() => upsertMessage(fullMsg, 'append'))
+			})
+		}
+
+		return fullMsg
+	}
+
         return {
                 ...sock,
                 issuePrivacyTokens,
                 assertSessions,
                 relayMessage,
+                sendPollVote,
+                pinMessage,
+                unpinMessage,
                 sendReceipt,
                 sendReceipts,
                 readMessages,
@@ -1673,6 +1934,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 waUploadToServer,
                 fetchPrivacySettings,
                 sendPeerDataOperationMessage,
+                sendPeerMessage,
+                requestAppStateSyncKey,
                 createParticipantNodes,
                 getUSyncDevices,
                 messageRetryManager,
@@ -1683,9 +1946,41 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 sendStatusMention: async (content: Record<string, any>, jids: string[] = []) => {
                         return toxicHandler.sendStatusWhatsApp(content, jids)
                 },
-                sendGroupStatus: async (content: Record<string, any>, jids: string[] = []) => {
-                        return toxicHandler.sendStatusWhatsApp(content, jids)
-                },
+                sendGroupStatus: (jid: string, content: AnyMessageContent, options: GroupStatusOptions = {}) =>
+                        sendGroupStatus(
+                                jid,
+                                content,
+                                {
+                                        relayMessage,
+                                        waUploadToServer,
+                                        userJid: authState.creds.me?.id,
+                                        userLid: authState.creds.me?.lid
+                                },
+                                options
+                        ),
+                getPNForLID: (lid: string) => signalRepository.lidMapping.getPNForLID(lid),
+                getPNsForLIDs: (lids: string[]) => signalRepository.lidMapping.getPNsForLIDs(lids),
+                getLIDForPN: (pn: string) => signalRepository.lidMapping.getLIDForPN(pn),
+                getLIDsForPNs: (pns: string[]) => signalRepository.lidMapping.getLIDsForPNs(pns),
+                deleteMessage,
+                requestPayment: (jid: string, options: RequestPaymentOptions) => requestPayment(jid, options, paymentDeps),
+                sendPayment: (jid: string, options: SendPaymentOptions) => sendPayment(jid, options, paymentDeps),
+                declinePaymentRequest: (jid: string, key: WAMessageKey) => declinePaymentRequest(jid, key, paymentDeps),
+                cancelPaymentRequest: (jid: string, key: WAMessageKey) => cancelPaymentRequest(jid, key, paymentDeps),
+                sendPaymentInvite: (jid: string, options: PaymentInviteOptions = {}) =>
+                        sendPaymentInvite(jid, options, paymentDeps),
+                sendStickerPack: (jid: string, pack: StickerPack) => sendStickerPack(jid, pack, stickerPackDeps),
+                sendChannelStatus: (jid: string, content: AnyMessageContent, options: ChannelStatusOptions = {}) =>
+                        sendChannelStatus(
+                                jid,
+                                content,
+                                {
+                                        sendNode,
+                                        waUploadToServer,
+                                        userJid: authState.creds.me?.id
+                                },
+                                options
+                        ),
                 updateMediaMessage: async (message: WAMessage) => {
                         const content = assertMediaContent(message.message)
                         const mediaKey = content.mediaKey!
@@ -1733,6 +2028,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
                         return message
                 },
+                sendRichHtml,
+                sendRichHtmlMessage: sendRichHtml,
                 sendMessage: async (jid: string, content: AnyMessageContent, options: MiscMessageGenerationOptions = {}) => {
                         const userJid = authState.creds.me!.id
                         if (

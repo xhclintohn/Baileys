@@ -274,7 +274,7 @@ export class LIDMappingStore {
 			}
 
 			const lidDevice = decoded!.device !== undefined ? decoded!.device : 0
-			const pnJid = `${pnUser}:${lidDevice}@${
+			const pnJid = `${pnUser}${lidDevice ? `:${lidDevice}` : ''}@${
 				decoded!.domainType === WAJIDDomains.HOSTED_LID ? 'hosted' : 's.whatsapp.net'
 			}`
 
