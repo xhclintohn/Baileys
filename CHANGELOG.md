@@ -1,3 +1,8 @@
+# 1.8.4 (2026-11-25)
+
+### Features
+- **Chat wallpaper** — set a custom group chat wallpaper/theme image. Adds the `chat-wallpaper-image` media type (upload path `/mms/chat-wallpaper-image`, `Chat Wallpaper` media keys) and tags `CHAT_THEME_SETTING` protocol messages with the `chat_theme` envelope (`type="media"`, `mediatype="chat_theme"`) so Android applies them. See the Chat Wallpaper section in the README for a ready-to-use helper.
+
 # 1.8.3 (2026-11-25)
 
 ### Fixes
