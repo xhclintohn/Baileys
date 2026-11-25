@@ -1,6 +1,6 @@
 If you find this project helpful, consider [following me on GitHub](https://github.com/xhclintohn).
 
-# toxic-baileys™
+# toxic-baileys
 
 <div align="center">
 
@@ -12,9 +12,9 @@ If you find this project helpful, consider [following me on GitHub](https://gith
 
 </div>
 
-Hey! 👋 This is **toxic-baileys** — a souped-up, feature-packed fork of the Baileys WhatsApp Web API. If you want rock-solid WhatsApp automation with LID identity mapping, AI group support, cross-platform interoperability, extended message types, and much better connection handling, you are in the right place 🙂
+This is **toxic-baileys** — a feature-packed fork of the Baileys WhatsApp Web API. It adds LID identity mapping, AI group support, cross-platform interoperability, extended message types, and more reliable connection handling on top of upstream Baileys.
 
-**Maintainer:** 𝐱𝐡_𝐜𝐥𝐢𝐧𝐭𝐨𝐧
+**Maintainer:** xh_clinton
 
 ---
 
@@ -22,24 +22,24 @@ Hey! 👋 This is **toxic-baileys** — a souped-up, feature-packed fork of the 
 > ### LID Mapping — Critical Feature in This Fork
 > WhatsApp has rolled out **Linked Identity (LID)** JIDs as part of its cross-platform interoperability initiative. Group messages and status updates now arrive with `@lid` domain JIDs instead of standard `@s.whatsapp.net` phone-number JIDs. **Without LID resolution, you cannot identify who sent a message in many groups.**
 >
-> This fork ships a complete `LIDMappingStore` (bidirectional LRU cache + persistent key store) and `UsyncLIDProtocol` so your bot always knows the real phone number behind every `@lid` JID. See the **[LID Mapping System](#-lid-mapping-system)** section for full integration details.
+> This fork ships a complete `LIDMappingStore` (bidirectional LRU cache + persistent key store) and `UsyncLIDProtocol` so your bot always knows the real phone number behind every `@lid` JID. See the **[LID Mapping System](#lid-mapping-system)** section for full integration details.
 
 ---
 
 <details>
-<summary>📑 Table of contents — click to expand</summary>
+<summary>Table of contents — click to expand</summary>
 
-- [🚀 What's New](#-whats-new)
-- [✨ Features](#-features)
-- [📦 Installation](#-installation)
-- [⚡ Quick Start](#-quick-start)
-- [🔌 Connection & Configuration](#-connection--configuration)
-- [🔑 Authentication State Management](#-authentication-state-management)
-- [🧠 LID Mapping System](#-lid-mapping-system)
-- [🤖 AI Groups](#-ai-groups)
-- [🔗 Interoperability API](#-interoperability-api)
-- [📡 USync Protocol](#-usync-protocol)
-- [💬 Sending Messages](#-sending-messages)
+- [Changelog](#changelog)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Connection & Configuration](#connection--configuration)
+- [Authentication State Management](#authentication-state-management)
+- [LID Mapping System](#lid-mapping-system)
+- [AI Groups](#ai-groups)
+- [Interoperability API](#interoperability-api)
+- [USync Protocol](#usync-protocol)
+- [Sending Messages](#sending-messages)
   - [Basic Messages](#basic-messages)
   - [Media Messages](#media-messages)
   - [Interactive Messages](#interactive-messages)
@@ -50,102 +50,35 @@ Hey! 👋 This is **toxic-baileys** — a souped-up, feature-packed fork of the 
   - [Payment Request Messages](#payment-request-messages)
   - [Product Messages](#product-messages)
   - [Button & Template Messages](#button--template-messages)
-- [🛠️ Rich Message Builders](#-rich-message-builders)
-- [💭 Chat & Message Management](#-chat--message-management)
-- [👥 Group Management](#-group-management)
-- [👤 User & Profile Management](#-user--profile-management)
-- [✏️ Username Management](#-username-management)
-- [📢 Newsletter / Channel Management](#-newsletter--channel-management)
-- [🔒 Privacy & Block Management](#-privacy--block-management)
-- [💾 Data Store Implementation](#-data-store-implementation)
-- [🧰 Utility Functions](#-utility-functions)
-- [💡 Best Practices & Tips](#-best-practices--tips)
-- [⚠️ Important Legal Notice](#-important-legal-notice)
-- [🆘 Getting Help](#-getting-help)
-- [📜 License](#-license)
+- [Rich Message Builders](#rich-message-builders)
+- [Chat & Message Management](#chat--message-management)
+- [Group Management](#group-management)
+- [User & Profile Management](#user--profile-management)
+- [Username Management](#username-management)
+- [Newsletter / Channel Management](#newsletter--channel-management)
+- [Privacy & Block Management](#privacy--block-management)
+- [Data Store Implementation](#data-store-implementation)
+- [Utility Functions](#utility-functions)
+- [Best Practices & Tips](#best-practices--tips)
+- [Important Legal Notice](#important-legal-notice)
+- [Getting Help](#getting-help)
+- [License](#license)
 
 </details>
 
-## 🚀 What's New
+## Changelog
 
-This update pulls in a batch of fixes and improvements from upstream Baileys and merges them into the existing feature set without touching any of the custom stuff (ToxicHandler, AI groups, interop, LID mapping, group status).
+Every version and what changed in it is listed in [CHANGELOG.md](CHANGELOG.md).
 
-<details>
-<summary>🆕 Click to see everything in this update</summary>
-
-**New in 1.8.2:**
-- **Poll voting and message pinning.** Vote on a poll with `sendPollVote` (the vote counts in LID-addressed groups too), and pin or unpin a message for everyone with `pinMessage` / `unpinMessage`. Pinning a message that isn't in the chat is refused instead of sent.
-- **Android 13 by default.** New sessions show up as Chrome on Android 13.
-- **View-once sends that actually look view-once.** Outgoing view-once media now carries the stanza-level marker WhatsApp Web sends, so the other side shows it as view-once.
-- **Imported sessions heal themselves on connect.** A missing app-state sync key is asked for from the phone once, so archive and clear stop failing on imported sessions.
-- **A batch of upstream reliability fixes.** Sender keys are only remembered for devices that really got one, server encrypt notifications no longer crash without a count, restored retry limits survive restarts, media downloads stop using the placeholder host, and dropped downloads error out instead of hanging. WhatsApp version is now 2.3000.1054660005.
-
-**New in 1.8.1:**
-- **Media group statuses show up like official ones.** Image, video, audio and sticker statuses posted with `sendGroupStatus` now carry the same status info the official app sends (author attribution, poster id, media-key info), so clients display them the same way. Text statuses are unchanged.
-
-**New in 1.8.0:**
-- **Group statuses actually post now.** `sendGroupStatus` uses the real group-status message format, so the status shows up inside the group instead of vanishing. Heads up: the call shape changed to `sendGroupStatus(jid, content)` — the old `(content, jids)` shape no longer works. `sendStatusMention` is untouched.
-
-**New in 1.7.1:**
-- **Zero TypeScript errors.** All 91 pre-existing type errors are fixed, so the build typecheck now passes clean. Nothing runs differently — the fixes are types only, and the compiled JavaScript is byte-for-byte the same as 1.7.0.
-
-**New in 1.7.0:**
-- **Channel statuses finally work both ways.** Channel admins can post a 24h status with `sendChannelStatus`, and statuses posted by channels you follow now show up as a `newsletter.status` event instead of being invisible. Regular status acks are untouched.
-- **Payment messages.** `requestPayment`, `sendPayment`, `declinePaymentRequest`, `cancelPaymentRequest`, and `sendPaymentInvite` send WhatsApp payment cards. This only sends the message — actually moving money still needs a payment provider.
-- **Sticker packs.** `sendStickerPack` sends a whole pack (up to 60 stickers plus a tray icon) in one message that the receiver can add to their collection.
-- **Full-image profile pictures.** Pass `{ full: true }` to `updateProfilePicture` and the photo goes up as-is — no crop, no padding, nothing cut off. Without it, the usual 640x640 crop still applies.
-- **Better delete and clear chat.** `deleteMessage` deletes for everyone, `deleteMessageForMe` deletes one message just for you, and `clearChat` can now keep starred messages with `{ deleteStarred: false }`. Clearing a chat on another device now shows up as an update here too.
-- **Article cards, premium sticker flags, and more.** `sendArticleCard` for link-preview cards, `isAiSticker` / `isAvatar` / `isLottie` flags on stickers, a Markdown-table-to-rich-response helper, peer messages with app-state key requests, runtime patching of username query IDs, and LID lookups right on the socket (`getPNForLID` and friends) — plus a fix so LID lookups stop returning phone numbers with a stray `:0` on the end.
-
-**New in 1.6.0:**
-- **Pairing codes work again — and fail loudly when they should.** The pairing key derivation now matches WhatsApp's protocol (PBKDF2), fixing codes that were always rejected while QR worked. On top of that, pairing requests wait for the server's readiness stanza, surface real server errors instead of dying silently, and can't be double-fired.
-- **Retries actually recover sessions now.** When a contact asks for a resend, the session bundle inside their retry receipt is used to rebuild the session, stale sessions are detected via registration-id/base-key checks, and group resends carry the sender-key distribution so people can actually decrypt.
-- **Sessions stop dying for silly reasons.** Auth files are written atomically (no more corrupted `creds.json` after a crash), undecryptable echoes from your own other devices no longer trigger stream-killing retry loops, and `<status>` stanzas are acked so the server doesn't end the stream.
-- **`Browsers.android` is available** for sessions that need to present as Android, and pre-key uploads are deduplicated the way WhatsApp Web does it.
-
-- **LID lookups are faster and less wasteful.** The LID mapping store now batches and coalesces concurrent lookups instead of firing off duplicate requests, and it has a proper `close()` for shutting it down cleanly.
-- **A real username API.** `checkUsername`, `setUsername`, `getMyUsername`, `findUserByUsername`, `fetchContactUsernames`, and a couple more — see [Username Management](#username-management). Also added `USyncPictureProtocol` and `USyncTextStatusProtocol` for fetching profile pictures and text statuses via USync directly.
-- **New `AIRich`, `Button`, `ButtonV2`, `Carousel`, and `Toolkit` builders.** See the [Rich Message Builders](#rich-message-builders) section — chainable APIs for buttons, carousels, and Meta AI-style rich responses with inline citations, LaTeX, code blocks, and tables. Each one also has a couple of shorter alias names if you'd rather import it as something else.
-- **`sendInteractive` (aka `inappsignup` / `inapp_signup`).** Sends interactive buttons, and automatically falls back to a plain text message if the bot's own paired device is iOS, since buttons don't reliably show up there.
-- **Profile pictures no longer crop lopsided.** `generateProfilePicture` was cropping non-square photos from the top-left corner instead of the center — fixed, so the whole subject stays in frame instead of getting cut off to one side.
-- **App state sync no longer gives up on the first bad patch.** If a single patch fails to decode or a hash check comes back wrong, it logs a warning and keeps syncing instead of throwing and killing the whole sync.
-- **Event buffer actually cleans up after itself now.** `destroy()` clears pending timers and listeners when the socket closes, instead of just being a name with nothing behind it.
-- **Spoofed protocol messages get dropped.** This covers the message-spoofing/app-state-corruption issue reported in [GHSA-qvv5-jq5g-4cgg](https://github.com/WhiskeySockets/Baileys/security/advisories/GHSA-qvv5-jq5g-4cgg) (CVE-2026-48063) — history sync notifications, app state key shares, and placeholder-resend responses that don't actually come from your own account (`fromMe`) are now rejected instead of processed.
-- **Media downloads fall back to the right host.** Instead of always assuming `mmg.whatsapp.net`, downloads now use the host from the message itself when one is present.
-- **`getChatId` fails loudly instead of quietly.** Missing `remoteJid`/`participant` now throws a clear error instead of silently working with `undefined`.
-- **Profile picture fetching cleaned up** to match the newer, simpler query-building approach upstream uses.
-- **Group presence updates** now carry `groupOnlineCount` when WhatsApp sends it.
-- Dependency versions and resolutions bumped to match what upstream is currently shipping.
-
-</details>
-
-<details>
-<summary>📚 All previous features — how this fork compares to upstream Baileys</summary>
-
-Compared to upstream Baileys, this fork adds:
-
-| Feature | Description |
-|---|---|
-| **LID Mapping System** | Full `LIDMappingStore` with LRU cache, persistent key store, bidirectional lookups, and `UsyncLIDProtocol` |
-| **AI Groups** | `makeAIGroupsSocket` — create, manage, and receive events for WhatsApp AI-powered groups |
-| **Interoperability API** | `makeInteropSocket` — fetch third-party integrators, accept Interop TOS, opt in/out |
-| **USync Protocol Layer** | Full `WAUSync` module: LID, Contact, Device, Disappearing Mode, Status, Text Status, Picture, Username, Bot Profile protocols |
-| **MEX / GraphQL Queries** | `executeWMexQuery` for structured WhatsApp server queries via the `w:mex` IQ namespace |
-| **`me.lid` Credential** | Bot's own LID identity stored in credentials on pairing via `configureSuccessfulPairing` |
-| **`lidDbMigrated` Login Flag** | Signals to WhatsApp to push down LID mappings on connect |
-| **Group Status V2** | `ToxicHandler` exposed on socket for rich group story/status management |
-| **`SignalRepositoryWithLIDStore`** | Extended signal repository type that exposes `lidMapping` directly on the socket |
-| **`newsletterId()` Helper** | Utility to extract a clean newsletter/channel ID from any JID format |
-
-</details>
+[![Changelog](https://img.shields.io/badge/Changelog-View%20all%20versions-blue?style=for-the-badge)](CHANGELOG.md)
 
 ---
 
-## ✨ Features
-A quick tour of what you get out of the box 🙂
+## Features
+A quick tour of what you get out of the box
 
 <details>
-<summary>✨ Click to see all features</summary>
+<summary>Click to see all features</summary>
 
 - **Modern & Fast** — Latest WA version `[2,3000,1035194821]`, optimised pre-key upload (812 keys)
 - **Full LID Identity Resolution** — Bidirectional LIDPN mapping with LRU cache, USync lookup, and persistent storage
@@ -165,8 +98,8 @@ A quick tour of what you get out of the box 🙂
 
 ---
 
-## 📦 Installation
-Pick whichever one suits you 🙂
+## Installation
+Pick whichever one suits you
 
 ### Via npm
 ```bash
@@ -194,37 +127,53 @@ npm install github:xhclintohn/Baileys
 
 ---
 
-## ⚡ Quick Start
-Get connected in under a minute 🙂
+## Quick Start
+Get connected in under a minute.
 
 <details>
 <summary>Basic Connection (QR Code)</summary>
 
 ```javascript
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from 'toxic-baileys';
-import { Boom } from '@hapi/boom';
+import makeWASocket, {
+  useMultiFileAuthState,
+  Browsers,
+  makeCacheableSignalKeyStore,
+  DisconnectReason,
+} from 'toxic-baileys';
+import pino from 'pino';
 
 async function connectToWhatsApp() {
- const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
- const sock = makeWASocket({ auth: state, printQRInTerminal: true });
+  const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
- sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
- if (connection === 'close') {
- const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
- if (shouldReconnect) connectToWhatsApp();
- } else if (connection === 'open') {
- console.log('Connected! Bot LID:', sock.user?.lid);
- }
- });
+  const sock = makeWASocket({
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
+    },
+    logger: pino({ level: 'silent' }),
+    browser: Browsers.android('Chrome'),
+    syncFullHistory: false,
+    markOnlineOnConnect: false,
+  });
 
- sock.ev.on('messages.upsert', async ({ messages }) => {
- for (const m of messages) {
- if (!m.message) continue;
- console.log('Message:', JSON.stringify(m, undefined, 2));
- }
- });
+  sock.ev.on('creds.update', saveCreds);
 
- sock.ev.on('creds.update', saveCreds);
+  sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
+    if (qr) console.log('Scan this QR:', qr);
+    if (connection === 'close') {
+      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+      if (shouldReconnect) connectToWhatsApp();
+    } else if (connection === 'open') {
+      console.log('Connected! Bot LID:', sock.user?.lid);
+    }
+  });
+
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    for (const m of messages) {
+      if (!m.message) continue;
+      console.log('Message:', JSON.stringify(m, undefined, 2));
+    }
+  });
 }
 
 connectToWhatsApp().catch(console.error);
@@ -235,18 +184,36 @@ connectToWhatsApp().catch(console.error);
 <summary>Pairing Code (no QR)</summary>
 
 ```javascript
-import makeWASocket, { useMultiFileAuthState } from 'toxic-baileys';
+import makeWASocket, {
+  useMultiFileAuthState,
+  Browsers,
+  makeCacheableSignalKeyStore,
+} from 'toxic-baileys';
+import pino from 'pino';
 
 async function connectWithPairing() {
- const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
- const sock = makeWASocket({ auth: state, printQRInTerminal: false });
- sock.ev.on('creds.update', saveCreds);
+  const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
- if (!sock.authState.creds.registered) {
- const phoneNumber = '254712345678'; // no + or spaces
- const code = await sock.requestPairingCode(phoneNumber);
- console.log('Pairing Code:', code);
- }
+  const sock = makeWASocket({
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
+    },
+    logger: pino({ level: 'silent' }),
+    browser: Browsers.android('Chrome'),
+    syncFullHistory: false,
+    markOnlineOnConnect: false,
+  });
+
+  sock.ev.on('creds.update', saveCreds);
+
+  sock.ev.on('connection.update', async ({ qr }) => {
+    if (qr && !state.creds.registered) {
+      const phoneNumber = '254712345678'; // no + or spaces
+      const code = await sock.requestPairingCode(phoneNumber);
+      console.log('Pairing Code:', code);
+    }
+  });
 }
 
 connectWithPairing().catch(console.error);
@@ -255,8 +222,8 @@ connectWithPairing().catch(console.error);
 
 ---
 
-## 🔌 Connection & Configuration
-Tune how your bot connects to WhatsApp 🙂
+## Connection & Configuration
+Tune how your bot connects to WhatsApp.
 
 <details>
 <summary>Full Socket Configuration</summary>
@@ -268,7 +235,7 @@ import NodeCache from '@cacheable/node-cache';
 const groupCache = new NodeCache({ stdTTL: 300, useClones: false });
 
 const sock = makeWASocket({
- browser: Browsers.macOS('Chrome'),
+ browser: Browsers.android('Chrome'),
  syncFullHistory: true,
  markOnlineOnConnect: false,
  connectTimeoutMs: 60_000,
@@ -288,8 +255,8 @@ sock.ev.on('groups.update', async ([event]) => {
 
 ---
 
-## 🔑 Authentication State Management
-How your bot remembers who it is between restarts 🙂
+## Authentication State Management
+How your bot remembers who it is between restarts
 
 <details>
 <summary>Multi-File Auth (Development)</summary>
@@ -320,13 +287,13 @@ sock.ev.on('creds.update', async (creds) => await db.saveAuthCreds(creds));
 
 ---
 
-## 🧠 LID Mapping System
+## LID Mapping System
 
 > [!IMPORTANT]
 > **This is one of the most critical new features in this fork.** WhatsApp is migrating groups to use Linked Identity (LID) JIDs — identifiers in the `@lid` domain that replace `@s.whatsapp.net` phone-number JIDs for privacy and cross-platform reasons. If you receive a message from `1234567890:0@lid` and don't have a mapping, you cannot identify the sender.
 
 <details>
-<summary>🤔 What is a LID, anyway?</summary>
+<summary>What is a LID, anyway?</summary>
 
 A **Linked Identity (LID)** is an opaque numeric identifier assigned to each WhatsApp account in the `@lid` domain. WhatsApp uses LIDs in groups to decouple a person's phone number from their group identity. The LID is stable across phone number changes and is used for the Signal encryption protocol in newer group types.
 
@@ -337,7 +304,7 @@ LID JID: 9876543210:0@lid opaque — phone number hidden
 
 </details>
 <details>
-<summary>⚙️ How the mapping store works</summary>
+<summary>How the mapping store works</summary>
 
 This fork implements `LIDMappingStore` in `src/Signal/lid-mapping.ts`:
 
@@ -367,7 +334,7 @@ Session/
 
 </details>
 <details>
-<summary>🪪 <code>me.lid</code> — your bot's own LID</summary>
+<summary><code>me.lid</code> — your bot's own LID</summary>
 
 When your bot pairs with WhatsApp, its own LID is stored in the session credentials:
 
@@ -380,13 +347,13 @@ console.log('My LID:', myLid); // e.g. "9876543210@lid"
 
 </details>
 <details>
-<summary>🚩 The <code>lidDbMigrated</code> login flag</summary>
+<summary>The <code>lidDbMigrated</code> login flag</summary>
 
 The login payload includes `lidDbMigrated: false`. This signals to WhatsApp that the client has not yet migrated its local LID database, which causes WhatsApp to push down a full set of LIDPN mappings on the initial connection — seeding your local store automatically.
 
 </details>
 <details>
-<summary>📖 API reference</summary>
+<summary>API reference</summary>
 
 ```typescript
 // On the socket (via SignalRepositoryWithLIDStore):
@@ -402,7 +369,7 @@ type LIDMapping = { lid: string; pn: string }
 
 </details>
 <details>
-<summary>💻 Live integration example</summary>
+<summary>Live integration example</summary>
 
 ```javascript
 import makeWASocket, { useMultiFileAuthState, makeCacheableSignalKeyStore } from 'toxic-baileys';
@@ -452,7 +419,7 @@ sock.ev.on('messages.upsert', async ({ messages }) => {
 
 </details>
 <details>
-<summary>🧩 Multi-layer resolution (recommended pattern)</summary>
+<summary>Multi-layer resolution (recommended pattern)</summary>
 
 For maximum reliability, resolve LIDs in this priority order:
 
@@ -510,12 +477,12 @@ async function resolveLid(lidJid, sock, lidPhoneCache) {
 
 ---
 
-## 🤖 AI Groups
+## AI Groups
 
 WhatsApp introduced AI-powered groups — special group types that include an AI bot participant. This fork exposes full management of these groups via `makeAIGroupsSocket` (which is included in the socket chain automatically).
 
 <details>
-<summary>🔗 Socket chain</summary>
+<summary>Socket chain</summary>
 
 ```
 makeWASocket
@@ -529,7 +496,7 @@ makeWASocket
 </details>
 
 <details>
-<summary>📣 AI group events</summary>
+<summary>AI group events</summary>
 
 ```javascript
 // Automatically fires when an AI group is created
@@ -546,7 +513,7 @@ sock.ev.on('group-participants.update', ({ id, participants, action }) => {
 </details>
 
 <details>
-<summary>📋 AI group metadata</summary>
+<summary>AI group metadata</summary>
 
 ```javascript
 // Fetch full metadata for an AI group (uses interactive query)
@@ -558,7 +525,7 @@ console.log('Participants:', meta.participants);
 </details>
 
 <details>
-<summary>➕ Add a bot to an AI group</summary>
+<summary>Add a bot to an AI group</summary>
 
 ```javascript
 // Add an AI bot participant to an AI group
@@ -569,7 +536,7 @@ await sock.aiGroupAddBot('1234567890@g.us');
 
 ---
 
-## 🔗 Interoperability API
+## Interoperability API
 
 WhatsApp's interoperability (interop) system allows messages to be exchanged with third-party messaging platforms. This fork exposes the full interop socket layer via `makeInteropSocket`.
 
@@ -581,7 +548,7 @@ WhatsApp's interoperability (interop) system allows messages to be exchanged wit
 | `13` | Haiket | Cross-platform messaging bridge |
 
 <details>
-<summary>🔍 Fetch available integrators</summary>
+<summary>Fetch available integrators</summary>
 
 ```javascript
 const integrators = await sock.fetchIntegrators();
@@ -602,7 +569,7 @@ const integrators = await sock.fetchIntegrators();
 
 </details>
 <details>
-<summary>✅ Accept the interop Terms of Service</summary>
+<summary>Accept the interop Terms of Service</summary>
 
 ```javascript
 // Must be called before opting in to any integrator
@@ -611,7 +578,7 @@ await sock.acceptInteropTOS();
 
 </details>
 <details>
-<summary>👍 Opt in to integrators</summary>
+<summary>Opt in to integrators</summary>
 
 ```javascript
 // Opt in to all default integrators (BirdyChat + Haiket)
@@ -625,7 +592,7 @@ await sock.optInIntegrators([12]);
 
 ---
 
-## 📡 USync Protocol
+## USync Protocol
 
 `WAUSync` is WhatsApp's batch user-info query system. This fork exports the full USync module so you can run structured queries against WhatsApp's `w:sync:user` IQ namespace.
 
@@ -644,7 +611,7 @@ await sock.optInIntegrators([12]);
 | `UsyncLIDProtocol` | Resolve LID phone-number pairs |
 
 <details>
-<summary>▶️ Running a USync query</summary>
+<summary>Running a USync query</summary>
 
 ```javascript
 import { USyncQuery, USyncUser } from 'toxic-baileys';
@@ -663,7 +630,7 @@ console.log(result);
 
 </details>
 <details>
-<summary>🧪 MEX / GraphQL queries</summary>
+<summary>MEX / GraphQL queries</summary>
 
 For structured server queries, this fork exposes `executeWMexQuery` — a GraphQL-style query executor over WhatsApp's `w:mex` IQ namespace:
 
@@ -684,7 +651,7 @@ console.log('MEX result:', result);
 
 ---
 
-## 💬 Sending Messages
+## Sending Messages
 
 ### Basic Messages
 
@@ -1038,7 +1005,7 @@ await sock.sendMessage(jid, {
 
 ---
 
-## 🛠️ Rich Message Builders
+## Rich Message Builders
 
 The `WABuilder` module ships as part of the package now — `Button`, `ButtonV2`, `Carousel`, `AIRich`, and `Toolkit`. Each builder takes your socket instance and gives you a chainable API instead of hand-writing raw message payloads.
 
@@ -1122,7 +1089,7 @@ Image resizing goes through `sharp` and video thumbnail extraction through `flue
 
 ---
 
-## 💭 Chat & Message Management
+## Chat & Message Management
 
 <details>
 <summary>Read receipts, archive, pin, delete, star</summary>
@@ -1140,7 +1107,7 @@ await sock.sendMessage(jid, { delete: m.key });
 
 ---
 
-## 👥 Group Management
+## Group Management
 
 <details>
 <summary>Create, modify, manage participants</summary>
@@ -1166,7 +1133,7 @@ const all = await sock.groupFetchAllParticipating();
 
 ---
 
-## 👤 User & Profile Management
+## User & Profile Management
 
 <details>
 <summary>Profile photo, status, presence</summary>
@@ -1188,7 +1155,7 @@ await sock.sendPresenceUpdate('paused', jid);
 
 ---
 
-## ✏️ Username Management
+## Username Management
 
 WhatsApp usernames (the `@username` handles, separate from phone numbers) — checking availability, claiming one, and looking people up by theirs.
 
@@ -1255,7 +1222,7 @@ console.log(result?.list[0]);
 
 ---
 
-## 📢 Newsletter / Channel Management
+## Newsletter / Channel Management
 
 <details>
 <summary>Create, follow, manage newsletters and channels</summary>
@@ -1292,7 +1259,7 @@ await sock.newsletterUnmute('1234567890@newsletter');
 
 ---
 
-## 🔒 Privacy & Block Management
+## Privacy & Block Management
 
 <details>
 <summary>Privacy settings and block list</summary>
@@ -1315,7 +1282,7 @@ const blocked = await sock.fetchBlocklist();
 
 ---
 
-## 💾 Data Store Implementation
+## Data Store Implementation
 
 <details>
 <summary>In-Memory Store (Development)</summary>
@@ -1350,7 +1317,7 @@ const groupStory = await toxicHandler.handleGroupStory(content, jid, quoted);
 
 ---
 
-## 🧰 Utility Functions
+## Utility Functions
 
 <details>
 <summary>Core Utilities</summary>
@@ -1396,8 +1363,8 @@ const votes = getAggregateVotesInPollMessage(
 
 ---
 
-## 💡 Best Practices & Tips
-A few things that will save you headaches down the road 🙂
+## Best Practices & Tips
+A few things that will save you headaches down the road
 
 ### Connection Stability
 1. Always implement reconnect logic on `connection === 'close'`
@@ -1486,7 +1453,7 @@ await queue.add(jid, { text: 'Message 2' });
 
 ---
 
-## ⚠️ Important Legal Notice
+## Important Legal Notice
 
 This project is **NOT** affiliated with, authorized, maintained, sponsored, or endorsed by WhatsApp LLC or any of its affiliates.
 
@@ -1497,7 +1464,7 @@ This project is **NOT** affiliated with, authorized, maintained, sponsored, or e
 
 ---
 
-## 🆘 Getting Help
+## Getting Help
 
 1. **GitHub Issues** — [github.com/xhclintohn/Baileys/issues](https://github.com/xhclintohn/Baileys/issues)
 2. **Response Time** — Typically within 24–48 hours
@@ -1511,7 +1478,7 @@ This project is **NOT** affiliated with, authorized, maintained, sponsored, or e
 
 ---
 
-## 📜 License
+## License
 
 MIT License. See [LICENSE](LICENSE) for details.
 
@@ -1521,7 +1488,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
- **toxic-baileys™** — Crafted with ❤️ by **𝐱𝐡_𝐜𝐥𝐢𝐧𝐭𝐨𝐧 **
+ **toxic-baileys** — built by **xh_clinton**
 
 *The most powerful WhatsApp automation toolkit*
 
