@@ -1312,6 +1312,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                         return 'native_flow_response'
                 } else if (message.groupInviteMessage) {
                         return 'url'
+                } else if (message.protocolMessage?.chatThemeSetting) {
+                        return 'chat_theme'
                 }
 
                 return ''
