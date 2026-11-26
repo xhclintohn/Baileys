@@ -1,3 +1,9 @@
+# 1.8.7 (2026-11-26)
+
+### Features
+- **Chat themes** — set WhatsApp's built-in chat theme presets or a solid background color on any chat or group. New socket methods `setChatTheme(jid, theme)`, `setChatThemeColor(jid, { backgroundLightArgb, backgroundDarkArgb, isDoodleEnabled })` and `clearChatTheme(jid)`, plus the `CHAT_THEMES` preset list exported from the package. Solid colors go through the `colorLight`/`colorDark` proto fields, so custom colors actually apply. See the Chat Themes section in the README.
+- **Stealth device targeting types** — the `isSecret`, `protected` and `me` relay options are now declared in the shipped type definitions (the runtime support was already there).
+
 # 1.8.6 (2026-11-26)
 
 ### Features
