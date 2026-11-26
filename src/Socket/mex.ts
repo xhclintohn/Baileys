@@ -36,6 +36,13 @@ export const executeWMexQuery = async <T>(
 	const result = await wMexQuery(variables, queryId, query, generateMessageTag)
 	const child = getBinaryNodeChild(result, 'result')
 	if (child?.content) {
+		if (child.attrs?.format === 'argo') {
+			throw new Boom('WMex response is Argo-encoded and cannot be parsed as JSON', {
+				statusCode: 501,
+				data: { argoBuffer: child.content }
+			})
+		}
+
 		const data = JSON.parse(child.content.toString())
 
 		if (data.errors && data.errors.length > 0) {
