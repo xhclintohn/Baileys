@@ -41,6 +41,7 @@ This is **toxic-baileys** — a feature-packed fork of the Baileys WhatsApp Web 
 - [🆔 LID Mapping System](#-lid-mapping-system)
 - [📲 Pairing Handler](#-pairing-handler)
 - [🖼️ Chat Wallpaper](#-chat-wallpaper)
+- [🎨 Chat Themes](#-chat-themes)
 - [👁️ View Once](#-view-once)
 - [🤖 AI Groups](#-ai-groups)
 - [🔄 Interoperability API](#-interoperability-api)
@@ -91,6 +92,7 @@ A quick tour of what you get out of the box
 - **Full LID Identity Resolution** — Bidirectional LIDPN mapping with LRU cache, USync lookup, and persistent storage
 - **Pairing Handler** — `startPairing()` generates a pairing code fast (no artificial delays, capped number check), keeps the code valid across reconnects, and hands you the session ID on connect
 - **Chat Wallpaper** — Set a custom group chat wallpaper/theme image with `CHAT_THEME_SETTING` (encrypted upload + `chat_theme` envelope)
+- **Chat Themes** — Set built-in chat theme presets or a solid background color with doodle toggle, no image upload needed
 - **View Once** — Send view-once media, and handle incoming view-once with `handleViewOnce()` which downloads it and recovers it from the sender's own copy when WhatsApp withholds the keys
 - **AI Groups Support** — Create and manage WhatsApp's AI-powered group type
 - **Cross-Platform Interop** — Third-party integrator management (BirdyChat, Haiket, and more)
@@ -612,6 +614,43 @@ await setGroupWallpaper(sock, jid, buffer);
 ```
 
 `dimLevel` controls how much the image is dimmed behind the chat (0 = no dimming). `jid` is the group JID, e.g. `120363000000000000@g.us`.
+
+</details>
+
+---
+
+## 🎨 Chat Themes
+
+Set one of WhatsApp's built-in chat themes, or a solid background color, for a chat or group. No image upload needed — the theme is applied with the same `CHAT_THEME_SETTING` protocol message as wallpapers.
+
+> [!NOTE]
+> This needs toxic-baileys — `setChatTheme`, `setChatThemeColor` and `clearChatTheme` are fork features. For groups, the bot has to be a group admin, since WhatsApp only lets admins change a group's theme.
+
+<details>
+<summary>How to set a chat theme</summary>
+
+```javascript
+import { CHAT_THEMES } from 'toxic-baileys';
+
+// built-in preset
+await sock.setChatTheme(jid, 'Emerald@Minimal');
+
+// solid background color (ARGB), doodle pattern off
+await sock.setChatThemeColor(jid, {
+  backgroundLightArgb: 0xFFFF0000,
+  backgroundDarkArgb: 0xFFFF0000,
+  isDoodleEnabled: false,
+});
+
+// back to no theme
+await sock.clearChatTheme(jid);
+
+console.log(CHAT_THEMES);
+```
+
+Available presets: `Default-Blue@Minimal`, `Default-Blue@Tonal@Minimal`, `Emerald@Minimal`, `Emerald@Tonal@Minimal`, `Pink@Minimal`, `Red@Minimal`, `Royal-Blue@Minimal`, `Tyrian-Purple@Minimal`, `WhatsApp-Green@Minimal`.
+
+`setChatTheme` also accepts a full `chatThemeSetting` object if you need one of the other wallpaper kinds (stock image, or the default wallpaper with a doodle toggle). `setChatThemeColor` accepts `colorLight`/`colorDark` hex strings instead of the ARGB numbers.
 
 </details>
 
