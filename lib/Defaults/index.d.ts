@@ -13,6 +13,7 @@ export declare const WA_ADV_HOSTED_ACCOUNT_SIG_PREFIX: any;
 export declare const WA_ADV_HOSTED_DEVICE_SIG_PREFIX: any;
 export declare const WA_DEFAULT_EPHEMERAL: number;
 export declare const STATUS_EXPIRY_SECONDS: number;
+export declare const CHAT_THEMES: string[];
 export declare const PLACEHOLDER_MAX_AGE_SECONDS: number;
 export declare const NOISE_MODE = "Noise_XX_25519_AESGCM_SHA256\0\0\0\0";
 export declare const DICT_VERSION = 3;
