@@ -1,3 +1,8 @@
+# 1.8.6 (2026-11-26)
+
+### Features
+- **View-once sender copies kept for 24 hours** — `handleViewOnce` now retains sender copies for `senderCopyCacheMs` (default 24 hours, was effectively 5 minutes), and copies that were recovered keep their downloaded buffer, so a view-once can still be retrieved long after it arrived even if WhatsApp has deleted the media since. The returned handler gains `getSenderCopy(senderJid, type?)` and `downloadSenderCopy(senderJid, type?)` for fetching a cached copy on demand, for example when someone replies to an old view-once.
+
 # 1.8.5 (2026-11-26)
 
 ### Features
