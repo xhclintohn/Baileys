@@ -457,6 +457,14 @@ export type MessageRelayOptions = MinimalRelayOptions & {
         me?: boolean
 }
 
+export type ChatThemeColorOptions = {
+        backgroundLightArgb?: number
+        backgroundDarkArgb?: number
+        colorLight?: string
+        colorDark?: string
+        isDoodleEnabled?: boolean
+}
+
 export type MiscMessageGenerationOptions = MinimalRelayOptions & {
         logger?: ILogger
         timestamp?: Date

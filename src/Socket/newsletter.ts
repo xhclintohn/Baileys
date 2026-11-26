@@ -97,7 +97,17 @@ export const makeNewsletterSocket = (config: SocketConfig) => {
 					type: type.toUpperCase()
 				}
 			}
-			const result = await executeWMexQuery<unknown>(variables, QueryIds.METADATA, XWAPaths.xwa2_newsletter_metadata)
+			const result = await executeWMexQuery<unknown>(variables, QueryIds.METADATA, XWAPaths.xwa2_newsletter_metadata).catch((err: unknown) => {
+				const argoBuffer = (err as { data?: { argoBuffer?: unknown } })?.data?.argoBuffer
+				if (Buffer.isBuffer(argoBuffer)) {
+					const match = argoBuffer.toString('utf-8').match(/\d+@newsletter/)
+					if (match) {
+						return { id: match[0] }
+					}
+				}
+
+				throw err
+			})
 			return parseNewsletterMetadata(result)
 		},
 

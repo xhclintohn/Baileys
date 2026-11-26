@@ -22,24 +22,31 @@ This is **toxic-baileys** — a feature-packed fork of the Baileys WhatsApp Web 
 > ### LID Mapping — Critical Feature in This Fork
 > WhatsApp has rolled out **Linked Identity (LID)** JIDs as part of its cross-platform interoperability initiative. Group messages and status updates now arrive with `@lid` domain JIDs instead of standard `@s.whatsapp.net` phone-number JIDs. **Without LID resolution, you cannot identify who sent a message in many groups.**
 >
-> This fork ships a complete `LIDMappingStore` (bidirectional LRU cache + persistent key store) and `UsyncLIDProtocol` so your bot always knows the real phone number behind every `@lid` JID. See the **[LID Mapping System](#lid-mapping-system)** section for full integration details.
+> This fork ships a complete `LIDMappingStore` (bidirectional LRU cache + persistent key store) and `UsyncLIDProtocol` so your bot always knows the real phone number behind every `@lid` JID. See the **[LID Mapping System](#-lid-mapping-system)** section for full integration details.
 
 ---
 
-<details>
-<summary>Table of contents — click to expand</summary>
+## 📑 Table of Contents
 
-- [Changelog](#changelog)
-- [Features](#features)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Connection & Configuration](#connection--configuration)
-- [Authentication State Management](#authentication-state-management)
-- [LID Mapping System](#lid-mapping-system)
-- [AI Groups](#ai-groups)
-- [Interoperability API](#interoperability-api)
-- [USync Protocol](#usync-protocol)
-- [Sending Messages](#sending-messages)
+- [📋 Changelog](#-changelog)
+- [⭐ Features](#-features)
+- [📦 Installation](#-installation)
+  - [Via npm](#via-npm)
+  - [Via Yarn](#via-yarn)
+  - [From GitHub (edge)](#from-github-edge)
+  - [Drop-in replacement for `@whiskeysockets/baileys`](#drop-in-replacement-for-whiskeysocketsbaileys)
+- [🚀 Quick Start](#-quick-start)
+- [🔗 Connection & Configuration](#-connection--configuration)
+- [🔐 Authentication State Management](#-authentication-state-management)
+- [🆔 LID Mapping System](#-lid-mapping-system)
+- [📲 Pairing Handler](#-pairing-handler)
+- [🖼️ Chat Wallpaper](#-chat-wallpaper)
+- [🎨 Chat Themes](#-chat-themes)
+- [👁️ View Once](#-view-once)
+- [🤖 AI Groups](#-ai-groups)
+- [🔄 Interoperability API](#-interoperability-api)
+- [📡 USync Protocol](#-usync-protocol)
+- [💬 Sending Messages](#-sending-messages)
   - [Basic Messages](#basic-messages)
   - [Media Messages](#media-messages)
   - [Interactive Messages](#interactive-messages)
@@ -50,23 +57,24 @@ This is **toxic-baileys** — a feature-packed fork of the Baileys WhatsApp Web 
   - [Payment Request Messages](#payment-request-messages)
   - [Product Messages](#product-messages)
   - [Button & Template Messages](#button--template-messages)
-- [Rich Message Builders](#rich-message-builders)
-- [Chat & Message Management](#chat--message-management)
-- [Group Management](#group-management)
-- [User & Profile Management](#user--profile-management)
-- [Username Management](#username-management)
-- [Newsletter / Channel Management](#newsletter--channel-management)
-- [Privacy & Block Management](#privacy--block-management)
-- [Data Store Implementation](#data-store-implementation)
-- [Utility Functions](#utility-functions)
-- [Best Practices & Tips](#best-practices--tips)
-- [Important Legal Notice](#important-legal-notice)
-- [Getting Help](#getting-help)
-- [License](#license)
+- [🧩 Rich Message Builders](#-rich-message-builders)
+- [📨 Chat & Message Management](#-chat--message-management)
+- [👥 Group Management](#-group-management)
+- [👤 User & Profile Management](#-user--profile-management)
+- [🏷️ Username Management](#-username-management)
+- [📰 Newsletter / Channel Management](#-newsletter--channel-management)
+- [🔒 Privacy & Block Management](#-privacy--block-management)
+- [🗄️ Data Store Implementation](#-data-store-implementation)
+- [🛠️ Utility Functions](#-utility-functions)
+- [✅ Best Practices & Tips](#-best-practices--tips)
+  - [Connection Stability](#connection-stability)
+  - [LID Mapping](#lid-mapping)
+  - [Performance](#performance)
+- [⚖️ Important Legal Notice](#-important-legal-notice)
+- [🆘 Getting Help](#-getting-help)
+- [📄 License](#-license)
 
-</details>
-
-## Changelog
+## 📋 Changelog
 
 Every version and what changed in it is listed in [CHANGELOG.md](CHANGELOG.md).
 
@@ -74,14 +82,18 @@ Every version and what changed in it is listed in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## Features
+## ⭐ Features
 A quick tour of what you get out of the box
 
 <details>
 <summary>Click to see all features</summary>
 
-- **Modern & Fast** — Latest WA version `[2,3000,1035194821]`, optimised pre-key upload (812 keys)
+- **Modern & Fast** — Latest WA version `[2,3000,1054660005]`, optimised pre-key upload (812 keys)
 - **Full LID Identity Resolution** — Bidirectional LIDPN mapping with LRU cache, USync lookup, and persistent storage
+- **Pairing Handler** — `startPairing()` generates a pairing code fast (no artificial delays, capped number check), keeps the code valid across reconnects, and hands you the session ID on connect
+- **Chat Wallpaper** — Set a custom group chat wallpaper/theme image with `CHAT_THEME_SETTING` (encrypted upload + `chat_theme` envelope)
+- **Chat Themes** — Set built-in chat theme presets or a solid background color with doodle toggle, no image upload needed
+- **View Once** — Send view-once media, and handle incoming view-once with `handleViewOnce()` which downloads it and recovers it from the sender's own copy when WhatsApp withholds the keys
 - **AI Groups Support** — Create and manage WhatsApp's AI-powered group type
 - **Cross-Platform Interop** — Third-party integrator management (BirdyChat, Haiket, and more)
 - **Enhanced Stability** — Improved connection handling, socket end handlers, `ev.destroy()` on close, cleaner pre-key retry logic
@@ -98,7 +110,7 @@ A quick tour of what you get out of the box
 
 ---
 
-## Installation
+## 📦 Installation
 Pick whichever one suits you
 
 ### Via npm
@@ -127,7 +139,7 @@ npm install github:xhclintohn/Baileys
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 Get connected in under a minute.
 
 <details>
@@ -222,7 +234,7 @@ connectWithPairing().catch(console.error);
 
 ---
 
-## Connection & Configuration
+## 🔗 Connection & Configuration
 Tune how your bot connects to WhatsApp.
 
 <details>
@@ -255,7 +267,7 @@ sock.ev.on('groups.update', async ([event]) => {
 
 ---
 
-## Authentication State Management
+## 🔐 Authentication State Management
 How your bot remembers who it is between restarts
 
 <details>
@@ -287,7 +299,7 @@ sock.ev.on('creds.update', async (creds) => await db.saveAuthCreds(creds));
 
 ---
 
-## LID Mapping System
+## 🆔 LID Mapping System
 
 > [!IMPORTANT]
 > **This is one of the most critical new features in this fork.** WhatsApp is migrating groups to use Linked Identity (LID) JIDs — identifiers in the `@lid` domain that replace `@s.whatsapp.net` phone-number JIDs for privacy and cross-platform reasons. If you receive a message from `1234567890:0@lid` and don't have a mapping, you cannot identify the sender.
@@ -477,7 +489,231 @@ async function resolveLid(lidJid, sock, lidPhoneCache) {
 
 ---
 
-## AI Groups
+## 📲 Pairing Handler
+
+Generate a WhatsApp pairing code and get a ready-to-use session ID when the user links — one function call, no socket boilerplate. The handler requests the code as soon as the socket is ready (no artificial delays), checks the number is on WhatsApp without blocking the code, re-registers the **same** code if the connection drops, and builds the session ID (base64 `creds.json`) once paired.
+
+> [!NOTE]
+> `startPairing` is a toxic-baileys utility — it only exists in this fork. The default browser fingerprint is Android/Chrome, the same one Toxic-MD runs, and it pairs fine from any phone.
+
+<details>
+<summary>Pairing example</summary>
+
+```js
+import { startPairing, isPairingActive } from '@whiskeysockets/baileys'
+
+const number = '254712345678'
+
+if (isPairingActive(number)) {
+    console.log('A pairing for this number is already running')
+} else {
+    await startPairing(number, {
+        onCode: (code) => {
+            console.log('Pairing code:', code)
+        },
+        onConnected: ({ sessionId, userJid }) => {
+            console.log('Paired:', userJid)
+            console.log('Session ID:', sessionId)
+        },
+        onError: (error) => {
+            console.error('Pairing failed:', error.message)
+        }
+    })
+}
+```
+
+Options:
+
+- `authDir` — folder for the temporary auth state (default: a temp folder that is deleted after pairing)
+- `timeoutMs` — give up after this long (default: 420000)
+- `browser` — linked-device fingerprint (default: `Browsers.android('Chrome')`)
+- `newsletterJid` — optional channel JID to follow right after pairing, e.g. `120363425667150709@newsletter`
+- `onCode(code)` — called once with the pairing code
+- `onConnected({ sessionId, userJid, number })` — called after a successful link; `sessionId` is the base64 session you can store and reuse
+- `onError(error)` — called if pairing fails or times out
+
+One pairing per number runs at a time — a second call for the same number fails fast with an error. `isPairingActive(number)` tells you if one is already running, and `buildSessionId(authDir)` builds a session ID from any existing auth folder.
+
+</details>
+
+---
+
+## 🖼️ Chat Wallpaper
+
+Set a custom wallpaper (chat theme image) for a group. The image is uploaded as encrypted media and applied with a `CHAT_THEME_SETTING` protocol message, so every member sees the new background.
+
+> [!NOTE]
+> This needs toxic-baileys — the `chat-wallpaper-image` media type and the `chat_theme` message envelope are fork features. The bot also has to be a group admin, since WhatsApp only lets admins change a group's theme.
+
+<details>
+<summary>How to set a group wallpaper</summary>
+
+```javascript
+import { encryptedStream, generateMessageIDV2, proto } from 'toxic-baileys';
+import { unlink } from 'fs/promises';
+
+async function setGroupWallpaper(sock, jid, image, options = {}) {
+  const media = Buffer.isBuffer(image)
+    ? image
+    : typeof image === 'string'
+      ? { url: image }
+      : image;
+
+  const { mediaKey, encFilePath, fileSha256, fileEncSha256 } =
+    await encryptedStream(media, 'chat-wallpaper-image', { logger: sock.logger });
+
+  let directPath;
+  try {
+    const uploaded = await sock.waUploadToServer(encFilePath, {
+      mediaType: 'chat-wallpaper-image',
+      fileEncSha256B64: fileEncSha256.toString('base64'),
+      timeoutMs: options.mediaUploadTimeoutMs,
+    });
+    directPath = uploaded.directPath;
+  } finally {
+    await unlink(encFilePath).catch(() => {});
+  }
+  if (!directPath) throw new Error('wallpaper upload returned no directPath');
+
+  const message = {
+    protocolMessage: {
+      type: proto.Message.ProtocolMessage.Type.CHAT_THEME_SETTING,
+      chatThemeSetting: {
+        settingTimestampMs: options.settingTimestampMs ?? Date.now(),
+        customImage: {
+          directPath,
+          mediaKey,
+          fileEncSha256,
+          fileSha256,
+          dimLevel: options.dimLevel ?? 0,
+        },
+      },
+    },
+  };
+
+  const messageId = options.messageId || generateMessageIDV2(sock.user?.id);
+  await sock.relayMessage(jid, message, {
+    messageId,
+    additionalAttributes: { type: 'media' },
+  });
+  return { key: { remoteJid: jid, fromMe: true, id: messageId }, message };
+}
+```
+
+Usage:
+
+```javascript
+// from a file path
+await setGroupWallpaper(sock, jid, './wallpaper.jpg');
+
+// from a URL, with dimming
+await setGroupWallpaper(sock, jid, 'https://example.com/wallpaper.jpg', { dimLevel: 0 });
+
+// from a Buffer
+await setGroupWallpaper(sock, jid, buffer);
+```
+
+`dimLevel` controls how much the image is dimmed behind the chat (0 = no dimming). `jid` is the group JID, e.g. `120363000000000000@g.us`.
+
+</details>
+
+---
+
+## 🎨 Chat Themes
+
+Set one of WhatsApp's built-in chat themes, or a solid background color, for a chat or group. No image upload needed — the theme is applied with the same `CHAT_THEME_SETTING` protocol message as wallpapers.
+
+> [!NOTE]
+> This needs toxic-baileys — `setChatTheme`, `setChatThemeColor` and `clearChatTheme` are fork features. For groups, the bot has to be a group admin, since WhatsApp only lets admins change a group's theme.
+
+<details>
+<summary>How to set a chat theme</summary>
+
+```javascript
+import { CHAT_THEMES } from 'toxic-baileys';
+
+// built-in preset
+await sock.setChatTheme(jid, 'Emerald@Minimal');
+
+// solid background color (ARGB), doodle pattern off
+await sock.setChatThemeColor(jid, {
+  backgroundLightArgb: 0xFFFF0000,
+  backgroundDarkArgb: 0xFFFF0000,
+  isDoodleEnabled: false,
+});
+
+// back to no theme
+await sock.clearChatTheme(jid);
+
+console.log(CHAT_THEMES);
+```
+
+Available presets: `Default-Blue@Minimal`, `Default-Blue@Tonal@Minimal`, `Emerald@Minimal`, `Emerald@Tonal@Minimal`, `Pink@Minimal`, `Red@Minimal`, `Royal-Blue@Minimal`, `Tyrian-Purple@Minimal`, `WhatsApp-Green@Minimal`.
+
+`setChatTheme` also accepts a full `chatThemeSetting` object if you need one of the other wallpaper kinds (stock image, or the default wallpaper with a doodle toggle). `setChatThemeColor` accepts `colorLight`/`colorDark` hex strings instead of the ARGB numbers.
+
+</details>
+
+---
+
+## 👁️ View Once
+
+### Sending view once
+
+Add `viewOnce: true` to any image, video or audio message:
+
+```js
+await sock.sendMessage(jid, { image: fs.readFileSync('./img.jpg'), viewOnce: true })
+await sock.sendMessage(jid, { video: fs.readFileSync('./vid.mp4'), viewOnce: true })
+await sock.sendMessage(jid, { audio: fs.readFileSync('./voice.ogg'), ptt: true, viewOnce: true })
+```
+
+### Handling incoming view once
+
+Use `handleViewOnce` — it watches incoming messages, detects view-once media, downloads it, and hands you the buffer. When WhatsApp withholds the media keys (the "unavailable" stub some phone-sent view-once arrives as), it automatically recovers the media from the sender's own keyed copy that arrives alongside it.
+
+> [!NOTE]
+> `handleViewOnce` is a toxic-baileys utility — it only exists in this fork.
+
+```js
+import { handleViewOnce } from '@whiskeysockets/baileys'
+
+const handler = handleViewOnce(sock, {
+    onViewOnce: async ({ buffer, type, sender, chatJid, via }) => {
+        console.log('View-once recovered:', type, 'from', sender, 'in', chatJid, 'via', via)
+        await sock.sendMessage(sock.user.id, { image: buffer })
+    },
+    onError: (error) => console.log('View-once failed:', error.message)
+})
+
+// later, to stop listening:
+handler.stop()
+```
+
+Options:
+
+- `onViewOnce(result)` — called with `{ key, chatJid, sender, type, buffer, mimetype, caption, message, via }`; `via` is `'direct'` when the view-once itself carried keys, or `'sender-copy'` when it was recovered from the sender's own copy
+- `onError(error, message)` — called when a view-once cannot be recovered
+- `senderCopyWindowMs` — how long sender copies stay available for recovery (default: 300000)
+- `senderCopyWaitMs` — how long to wait for a sender copy to arrive before giving up (default: 5000)
+- `senderCopyCacheMs` — how long sender copies are kept in the cache for later retrieval (default: 86400000, 24 hours)
+- `includeOwn` — also process your own outgoing view-once (default: false)
+
+The returned handler can also fetch a sender copy later, for example when a user replies to an old view-once asking for it again:
+
+```js
+const got = await handler.downloadSenderCopy(senderJid, 'image')
+if (got) await sock.sendMessage(chatJid, { image: got.buffer })
+```
+
+- `handler.getSenderCopy(senderJid, type?)` — returns the newest cached sender copy `{ message, type, ts, buffer? }` or `null`
+- `handler.downloadSenderCopy(senderJid, type?)` — returns `{ buffer, type, mimetype, message }` or `null`; uses the already-downloaded buffer when the copy was recovered before, so it still works if WhatsApp has deleted the media since
+
+Lower-level pieces are exported too if you want to build your own flow: `getViewOnceMedia(content)` detects view-once media (wrapper or inline flag) and returns `{ type, media }`, and `downloadViewOnceMessage(sock, message)` downloads one view-once message directly, returning `null` when it carries no keys.
+
+---
+
+## 🤖 AI Groups
 
 WhatsApp introduced AI-powered groups — special group types that include an AI bot participant. This fork exposes full management of these groups via `makeAIGroupsSocket` (which is included in the socket chain automatically).
 
@@ -536,7 +772,7 @@ await sock.aiGroupAddBot('1234567890@g.us');
 
 ---
 
-## Interoperability API
+## 🔄 Interoperability API
 
 WhatsApp's interoperability (interop) system allows messages to be exchanged with third-party messaging platforms. This fork exposes the full interop socket layer via `makeInteropSocket`.
 
@@ -592,7 +828,7 @@ await sock.optInIntegrators([12]);
 
 ---
 
-## USync Protocol
+## 📡 USync Protocol
 
 `WAUSync` is WhatsApp's batch user-info query system. This fork exports the full USync module so you can run structured queries against WhatsApp's `w:sync:user` IQ namespace.
 
@@ -651,7 +887,7 @@ console.log('MEX result:', result);
 
 ---
 
-## Sending Messages
+## 💬 Sending Messages
 
 ### Basic Messages
 
@@ -1005,7 +1241,7 @@ await sock.sendMessage(jid, {
 
 ---
 
-## Rich Message Builders
+## 🧩 Rich Message Builders
 
 The `WABuilder` module ships as part of the package now — `Button`, `ButtonV2`, `Carousel`, `AIRich`, and `Toolkit`. Each builder takes your socket instance and gives you a chainable API instead of hand-writing raw message payloads.
 
@@ -1089,7 +1325,7 @@ Image resizing goes through `sharp` and video thumbnail extraction through `flue
 
 ---
 
-## Chat & Message Management
+## 📨 Chat & Message Management
 
 <details>
 <summary>Read receipts, archive, pin, delete, star</summary>
@@ -1107,7 +1343,7 @@ await sock.sendMessage(jid, { delete: m.key });
 
 ---
 
-## Group Management
+## 👥 Group Management
 
 <details>
 <summary>Create, modify, manage participants</summary>
@@ -1133,7 +1369,7 @@ const all = await sock.groupFetchAllParticipating();
 
 ---
 
-## User & Profile Management
+## 👤 User & Profile Management
 
 <details>
 <summary>Profile photo, status, presence</summary>
@@ -1155,7 +1391,7 @@ await sock.sendPresenceUpdate('paused', jid);
 
 ---
 
-## Username Management
+## 🏷️ Username Management
 
 WhatsApp usernames (the `@username` handles, separate from phone numbers) — checking availability, claiming one, and looking people up by theirs.
 
@@ -1222,7 +1458,7 @@ console.log(result?.list[0]);
 
 ---
 
-## Newsletter / Channel Management
+## 📰 Newsletter / Channel Management
 
 <details>
 <summary>Create, follow, manage newsletters and channels</summary>
@@ -1259,7 +1495,7 @@ await sock.newsletterUnmute('1234567890@newsletter');
 
 ---
 
-## Privacy & Block Management
+## 🔒 Privacy & Block Management
 
 <details>
 <summary>Privacy settings and block list</summary>
@@ -1282,7 +1518,7 @@ const blocked = await sock.fetchBlocklist();
 
 ---
 
-## Data Store Implementation
+## 🗄️ Data Store Implementation
 
 <details>
 <summary>In-Memory Store (Development)</summary>
@@ -1317,7 +1553,7 @@ const groupStory = await toxicHandler.handleGroupStory(content, jid, quoted);
 
 ---
 
-## Utility Functions
+## 🛠️ Utility Functions
 
 <details>
 <summary>Core Utilities</summary>
@@ -1363,7 +1599,7 @@ const votes = getAggregateVotesInPollMessage(
 
 ---
 
-## Best Practices & Tips
+## ✅ Best Practices & Tips
 A few things that will save you headaches down the road
 
 ### Connection Stability
@@ -1453,7 +1689,7 @@ await queue.add(jid, { text: 'Message 2' });
 
 ---
 
-## Important Legal Notice
+## ⚖️ Important Legal Notice
 
 This project is **NOT** affiliated with, authorized, maintained, sponsored, or endorsed by WhatsApp LLC or any of its affiliates.
 
@@ -1464,7 +1700,7 @@ This project is **NOT** affiliated with, authorized, maintained, sponsored, or e
 
 ---
 
-## Getting Help
+## 🆘 Getting Help
 
 1. **GitHub Issues** — [github.com/xhclintohn/Baileys/issues](https://github.com/xhclintohn/Baileys/issues)
 2. **Response Time** — Typically within 24–48 hours
@@ -1478,7 +1714,7 @@ This project is **NOT** affiliated with, authorized, maintained, sponsored, or e
 
 ---
 
-## License
+## 📄 License
 
 MIT License. See [LICENSE](LICENSE) for details.
 

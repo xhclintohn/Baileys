@@ -1,3 +1,26 @@
+# 1.8.7 (2026-11-26)
+
+### Features
+- **Chat themes** — set WhatsApp's built-in chat theme presets or a solid background color on any chat or group. New socket methods `setChatTheme(jid, theme)`, `setChatThemeColor(jid, { backgroundLightArgb, backgroundDarkArgb, isDoodleEnabled })` and `clearChatTheme(jid)`, plus the `CHAT_THEMES` preset list exported from the package. Solid colors go through the `colorLight`/`colorDark` proto fields, so custom colors actually apply. See the Chat Themes section in the README.
+- **Stealth device targeting types** — the `isSecret`, `protected` and `me` relay options are now declared in the shipped type definitions (the runtime support was already there).
+
+# 1.8.6 (2026-11-26)
+
+### Features
+- **View-once sender copies kept for 24 hours** — `handleViewOnce` now retains sender copies for `senderCopyCacheMs` (default 24 hours, was effectively 5 minutes), and copies that were recovered keep their downloaded buffer, so a view-once can still be retrieved long after it arrived even if WhatsApp has deleted the media since. The returned handler gains `getSenderCopy(senderJid, type?)` and `downloadSenderCopy(senderJid, type?)` for fetching a cached copy on demand, for example when someone replies to an old view-once.
+
+# 1.8.5 (2026-11-26)
+
+### Features
+- **Pairing handler** — `startPairing(number, options)` generates a pairing code fast (requested on the QR event with no artificial delay, the on-WhatsApp check raced against a 1.5s cap so it cannot block the code), re-registers the same code across reconnects so the code the user already has stays valid, and hands back a base64 session ID on connect through `onConnected`. Also exports `isPairingActive(number)` and `buildSessionId(authDir)`. See the Pairing Handler section in the README for a full example.
+- **WMex Argo responses** — when WhatsApp answers a WMex query with an Argo-encoded payload (mobile/Android platform clients), `executeWMexQuery` now throws a clear Boom carrying the raw buffer instead of crashing on JSON.parse, and `newsletterMetadata` recovers the channel JID from the Argo payload so invite lookups keep working.
+- **View-once handler** — `handleViewOnce(sock, options)` watches incoming messages, detects view-once media, downloads it, and recovers it from the sender's own keyed copy when WhatsApp withholds the keys (the unavailable-stub case). Also exports `getViewOnceMedia(content)` and `downloadViewOnceMessage(sock, message)`. The README now covers sending view-once and handling incoming view-once end to end.
+
+# 1.8.4 (2026-11-25)
+
+### Features
+- **Chat wallpaper** — set a custom group chat wallpaper/theme image. Adds the `chat-wallpaper-image` media type (upload path `/mms/chat-wallpaper-image`, `Chat Wallpaper` media keys) and tags `CHAT_THEME_SETTING` protocol messages with the `chat_theme` envelope (`type="media"`, `mediatype="chat_theme"`) so Android applies them. See the Chat Wallpaper section in the README for a ready-to-use helper.
+
 # 1.8.3 (2026-11-25)
 
 ### Fixes

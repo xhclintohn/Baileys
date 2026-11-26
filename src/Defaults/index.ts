@@ -24,6 +24,18 @@ export const WA_DEFAULT_EPHEMERAL = 7 * 24 * 60 * 60
 
 export const STATUS_EXPIRY_SECONDS = 24 * 60 * 60
 
+export const CHAT_THEMES = [
+        'Default-Blue@Minimal',
+        'Default-Blue@Tonal@Minimal',
+        'Emerald@Minimal',
+        'Emerald@Tonal@Minimal',
+        'Pink@Minimal',
+        'Red@Minimal',
+        'Royal-Blue@Minimal',
+        'Tyrian-Purple@Minimal',
+        'WhatsApp-Green@Minimal'
+]
+
 export const PLACEHOLDER_MAX_AGE_SECONDS = 14 * 24 * 60 * 60
 
 export const NOISE_MODE = 'Noise_XX_25519_AESGCM_SHA256\0\0\0\0'
@@ -101,7 +113,8 @@ export const MEDIA_PATH_MAP: { [T in MediaType]?: string } = {
 	'product-catalog-image': '/product/image',
 	'md-app-state': '',
 	'md-msg-hist': '/mms/md-app-state',
-	'biz-cover-photo': '/pps/biz-cover-photo'
+	'biz-cover-photo': '/pps/biz-cover-photo',
+	'chat-wallpaper-image': '/mms/chat-wallpaper-image'
 }
 
 export const NEWSLETTER_MEDIA_PATH_MAP: { [T in MediaType]?: string } = {
@@ -137,7 +150,8 @@ export const MEDIA_HKDF_KEY_MAPPING = {
 	'product-catalog-image': '',
 	'payment-bg-image': 'Payment Background',
 	ptv: 'Video',
-	'biz-cover-photo': 'Image'
+	'biz-cover-photo': 'Image',
+	'chat-wallpaper-image': 'Chat Wallpaper'
 }
 
 export type MediaType = keyof typeof MEDIA_HKDF_KEY_MAPPING
