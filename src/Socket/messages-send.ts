@@ -7,6 +7,7 @@ import type {
         AnyMessageContent,
         MediaConnInfo,
         MessageReceiptType,
+        ChatThemeColorOptions,
         MessageRelayOptions,
         MiscMessageGenerationOptions,
         PaymentInviteOptions,
@@ -440,6 +441,78 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                                 content: undefined
                                         }
                                 ]
+                        }
+                )
+        }
+
+        const setChatTheme = (jid: string, theme: string | proto.Message.IChatThemeSetting, options: MessageRelayOptions = {}) => {
+                const themeSetting = typeof theme === 'string' ? { colorSchemeId: theme } : theme
+                return relayMessage(
+                        jid,
+                        {
+                                protocolMessage: {
+                                        type: proto.Message.ProtocolMessage.Type.CHAT_THEME_SETTING,
+                                        chatThemeSetting: {
+                                                settingTimestampMs: Date.now(),
+                                                ...themeSetting
+                                        }
+                                }
+                        },
+                        {
+                                ...options,
+                                additionalAttributes: {
+                                        type: 'media',
+                                        ...(options.additionalAttributes || {})
+                                }
+                        }
+                )
+        }
+
+        const setChatThemeColor = (jid: string, colorOptions: ChatThemeColorOptions = {}, options: MessageRelayOptions = {}) => {
+                const toHexColor = (argb: number) => (argb >>> 0).toString(16).padStart(8, '0').toUpperCase()
+                return relayMessage(
+                        jid,
+                        {
+                                protocolMessage: {
+                                        type: proto.Message.ProtocolMessage.Type.CHAT_THEME_SETTING,
+                                        chatThemeSetting: {
+                                                settingTimestampMs: Date.now(),
+                                                solidColor: {
+                                                        colorLight: colorOptions.colorLight ?? toHexColor(colorOptions.backgroundLightArgb ?? 0xffff0000),
+                                                        colorDark: colorOptions.colorDark ?? toHexColor(colorOptions.backgroundDarkArgb ?? 0xffff0000),
+                                                        isDoodleEnabled: colorOptions.isDoodleEnabled ?? false
+                                                }
+                                        }
+                                }
+                        },
+                        {
+                                ...options,
+                                additionalAttributes: {
+                                        type: 'media',
+                                        ...(options.additionalAttributes || {})
+                                }
+                        }
+                )
+        }
+
+        const clearChatTheme = (jid: string, options: MessageRelayOptions = {}) => {
+                return relayMessage(
+                        jid,
+                        {
+                                protocolMessage: {
+                                        type: proto.Message.ProtocolMessage.Type.CHAT_THEME_SETTING,
+                                        chatThemeSetting: {
+                                                settingTimestampMs: Date.now(),
+                                                clearTheme: true
+                                        }
+                                }
+                        },
+                        {
+                                ...options,
+                                additionalAttributes: {
+                                        type: 'media',
+                                        ...(options.additionalAttributes || {})
+                                }
                         }
                 )
         }
@@ -1942,6 +2015,9 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 getUSyncDevices,
                 messageRetryManager,
                 updateMemberLabel,
+                setChatTheme,
+                setChatThemeColor,
+                clearChatTheme,
                 toxicHandler,
                 userDevicesCache,
                 devicesMutex,
