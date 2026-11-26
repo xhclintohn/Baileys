@@ -33,7 +33,21 @@ export interface ViewOnceHandlerOptions {
 	onError?: (error: Error, message: WAMessage) => void | Promise<void>
 	senderCopyWindowMs?: number
 	senderCopyWaitMs?: number
+	senderCopyCacheMs?: number
 	includeOwn?: boolean
+}
+
+export interface CachedSenderCopy {
+	message: WAMessage
+	type: ViewOnceMediaType
+	ts: number
+	buffer?: Buffer
+}
+
+export interface ViewOnceHandler {
+	stop: () => void
+	getSenderCopy: (senderJid: string, type?: ViewOnceMediaType) => CachedSenderCopy | null
+	downloadSenderCopy: (senderJid: string, type?: ViewOnceMediaType) => Promise<{ buffer: Buffer; type: ViewOnceMediaType; mimetype?: string; message: WAMessage } | null>
 }
 
 const MEDIA_FIELDS: { field: string; type: ViewOnceMediaType }[] = [
@@ -86,8 +100,10 @@ const senderOf = (message: WAMessage) => {
 
 interface CachedCopy {
 	ts: number
+	seq: number
 	type: ViewOnceMediaType
 	message: WAMessage
+	buffer?: Buffer
 }
 
 interface PendingViewOnce {
@@ -97,26 +113,55 @@ interface PendingViewOnce {
 	expires: number
 }
 
-export const handleViewOnce = (sock: WASocket, options: ViewOnceHandlerOptions) => {
-	const { onViewOnce, onError, senderCopyWindowMs = 300000, senderCopyWaitMs = 5000, includeOwn = false } = options
+const MAX_COPIES_PER_SENDER = 10
+
+const numericCore = (jid: string) => (jid || '').split('@')[0]?.split(':')[0]?.replace(/\D/g, '') || ''
+
+export const handleViewOnce = (sock: WASocket, options: ViewOnceHandlerOptions): ViewOnceHandler => {
+	const { onViewOnce, onError, senderCopyWindowMs = 300000, senderCopyWaitMs = 5000, senderCopyCacheMs = 86400000, includeOwn = false } = options
 	const copies = new Map<string, CachedCopy[]>()
 	const pending: PendingViewOnce[] = []
 	let stopped = false
+	let seqCounter = 0
 
 	const pruneCopies = (sender: string) => {
 		const list = copies.get(sender)
 		if (!list) return
 		const now = Date.now()
-		const kept = list.filter(c => now - c.ts < senderCopyWindowMs)
+		const kept = list.filter(c => now - c.ts < senderCopyCacheMs)
 		if (kept.length) copies.set(sender, kept)
 		else copies.delete(sender)
 	}
 
+	const byNewest = (a: CachedCopy, b: CachedCopy) => (b.ts - a.ts) || (b.seq - a.seq)
+
 	const findCopy = (sender: string, type: ViewOnceMediaType) => {
 		pruneCopies(sender)
-		const list = copies.get(sender) || []
-		const sorted = [...list].sort((a, b) => b.ts - a.ts)
+		const now = Date.now()
+		const list = (copies.get(sender) || []).filter(c => now - c.ts < senderCopyWindowMs)
+		const sorted = [...list].sort(byNewest)
 		return sorted.find(c => c.type === type) || sorted[0] || null
+	}
+
+	const lookupCopy = (senderJid: string, type?: ViewOnceMediaType): CachedCopy | null => {
+		const key = (senderJid || '').split(':')[0] || ''
+		const candidates: CachedCopy[] = []
+		const collect = (k: string) => {
+			pruneCopies(k)
+			candidates.push(...(copies.get(k) || []))
+		}
+		if (copies.has(key)) collect(key)
+		if (!candidates.length) {
+			const core = numericCore(senderJid)
+			if (core) {
+				for (const k of copies.keys()) {
+					if (numericCore(k) === core) collect(k)
+				}
+			}
+		}
+		if (!candidates.length) return null
+		const sorted = candidates.sort(byNewest)
+		return (type ? sorted.find(c => c.type === type) : undefined) || sorted[0] || null
 	}
 
 	const deliver = async (message: WAMessage, info: ViewOnceMediaInfo, buffer: Buffer, via: ViewOnceResult['via']) => {
@@ -138,8 +183,9 @@ export const handleViewOnce = (sock: WASocket, options: ViewOnceHandlerOptions) 
 		const copy = findCopy(item.sender, item.info.type)
 		if (!copy) return false
 		try {
-			const buffer = await downloadBuffer(sock, copy.message)
+			const buffer = copy.buffer?.length ? copy.buffer : await downloadBuffer(sock, copy.message)
 			if (!buffer?.length) return false
+			copy.buffer = buffer
 			await deliver(item.message, item.info, buffer, 'sender-copy')
 			return true
 		} catch {
@@ -173,7 +219,8 @@ export const handleViewOnce = (sock: WASocket, options: ViewOnceHandlerOptions) 
 					const plain = pickMedia(normalizeMessageContent(message.message))
 					if (plain && hasMediaKeys(plain.media)) {
 						const list = copies.get(sender) || []
-						list.push({ ts: Date.now(), type: plain.type, message })
+						list.push({ ts: Date.now(), seq: ++seqCounter, type: plain.type, message })
+						while (list.length > MAX_COPIES_PER_SENDER) list.shift()
 						copies.set(sender, list)
 						for (let i = pending.length - 1; i >= 0; i--) {
 							const item = pending[i]
@@ -212,6 +259,24 @@ export const handleViewOnce = (sock: WASocket, options: ViewOnceHandlerOptions) 
 			try { sock.ev.off('messages.upsert', onUpsert) } catch {}
 			pending.length = 0
 			copies.clear()
+		},
+		getSenderCopy: (senderJid, type) => {
+			const copy = lookupCopy(senderJid, type)
+			if (!copy) return null
+			return { message: copy.message, type: copy.type, ts: copy.ts, buffer: copy.buffer }
+		},
+		downloadSenderCopy: async (senderJid, type) => {
+			const copy = lookupCopy(senderJid, type)
+			if (!copy) return null
+			try {
+				const buffer = copy.buffer?.length ? copy.buffer : await downloadBuffer(sock, copy.message)
+				if (!buffer?.length) return null
+				copy.buffer = buffer
+				const media = pickMedia(normalizeMessageContent(copy.message.message))?.media as { mimetype?: string | null } | undefined
+				return { buffer, type: copy.type, mimetype: media?.mimetype || undefined, message: copy.message }
+			} catch {
+				return null
+			}
 		}
 	}
 }
