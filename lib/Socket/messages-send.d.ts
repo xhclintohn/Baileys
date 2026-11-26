@@ -1,6 +1,6 @@
 import { Boom } from '@hapi/boom';
 import { proto } from '../../WAProto/index.js';
-import type { AnyMessageContent, MediaConnInfo, MessageReceiptType, MessageRelayOptions, MiscMessageGenerationOptions, PaymentInviteOptions, RequestPaymentOptions, SendPaymentOptions, SocketConfig, StickerPack, WAMessage, WAMessageKey } from '../Types/index.js';
+import type { AnyMessageContent, MediaConnInfo, MessageReceiptType, ChatThemeColorOptions, MessageRelayOptions, MiscMessageGenerationOptions, PaymentInviteOptions, RequestPaymentOptions, SendPaymentOptions, SocketConfig, StickerPack, WAMessage, WAMessageKey } from '../Types/index.js';
 import { MessageRetryManager } from '../Utils/index.js';
 import { type BinaryNode, type JidWithDevice } from '../WABinary/index.js';
 import { USyncQuery } from '../WAUSync/index.js';
@@ -30,6 +30,9 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     })[]>;
     messageRetryManager: MessageRetryManager | null;
     updateMemberLabel: (jid: string, memberLabel: string) => Promise<string>;
+    setChatTheme: (jid: string, theme: string | proto.Message.IChatThemeSetting, options?: MessageRelayOptions) => Promise<string>;
+    setChatThemeColor: (jid: string, colorOptions?: ChatThemeColorOptions, options?: MessageRelayOptions) => Promise<string>;
+    clearChatTheme: (jid: string, options?: MessageRelayOptions) => Promise<string>;
     toxicHandler: ToxicHandler;
     sendStatusMention: (content: Record<string, any>, jids?: string[]) => Promise<WAMessage>;
     sendGroupStatus: (jid: string, content: AnyMessageContent, options?: GroupStatusOptions) => Promise<WAMessage>;
