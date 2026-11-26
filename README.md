@@ -657,7 +657,18 @@ Options:
 - `onError(error, message)` — called when a view-once cannot be recovered
 - `senderCopyWindowMs` — how long sender copies stay available for recovery (default: 300000)
 - `senderCopyWaitMs` — how long to wait for a sender copy to arrive before giving up (default: 5000)
+- `senderCopyCacheMs` — how long sender copies are kept in the cache for later retrieval (default: 86400000, 24 hours)
 - `includeOwn` — also process your own outgoing view-once (default: false)
+
+The returned handler can also fetch a sender copy later, for example when a user replies to an old view-once asking for it again:
+
+```js
+const got = await handler.downloadSenderCopy(senderJid, 'image')
+if (got) await sock.sendMessage(chatJid, { image: got.buffer })
+```
+
+- `handler.getSenderCopy(senderJid, type?)` — returns the newest cached sender copy `{ message, type, ts, buffer? }` or `null`
+- `handler.downloadSenderCopy(senderJid, type?)` — returns `{ buffer, type, mimetype, message }` or `null`; uses the already-downloaded buffer when the copy was recovered before, so it still works if WhatsApp has deleted the media since
 
 Lower-level pieces are exported too if you want to build your own flow: `getViewOnceMedia(content)` detects view-once media (wrapper or inline flag) and returns `{ type, media }`, and `downloadViewOnceMessage(sock, message)` downloads one view-once message directly, returning `null` when it carries no keys.
 
