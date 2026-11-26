@@ -39,7 +39,9 @@ This is **toxic-baileys** — a feature-packed fork of the Baileys WhatsApp Web 
 - [🔗 Connection & Configuration](#-connection--configuration)
 - [🔐 Authentication State Management](#-authentication-state-management)
 - [🆔 LID Mapping System](#-lid-mapping-system)
+- [📲 Pairing Handler](#-pairing-handler)
 - [🖼️ Chat Wallpaper](#-chat-wallpaper)
+- [👁️ View Once](#-view-once)
 - [🤖 AI Groups](#-ai-groups)
 - [🔄 Interoperability API](#-interoperability-api)
 - [📡 USync Protocol](#-usync-protocol)
@@ -85,9 +87,11 @@ A quick tour of what you get out of the box
 <details>
 <summary>Click to see all features</summary>
 
-- **Modern & Fast** — Latest WA version `[2,3000,1035194821]`, optimised pre-key upload (812 keys)
+- **Modern & Fast** — Latest WA version `[2,3000,1054660005]`, optimised pre-key upload (812 keys)
 - **Full LID Identity Resolution** — Bidirectional LIDPN mapping with LRU cache, USync lookup, and persistent storage
+- **Pairing Handler** — `startPairing()` generates a pairing code fast (no artificial delays, capped number check), keeps the code valid across reconnects, and hands you the session ID on connect
 - **Chat Wallpaper** — Set a custom group chat wallpaper/theme image with `CHAT_THEME_SETTING` (encrypted upload + `chat_theme` envelope)
+- **View Once** — Send view-once media, and handle incoming view-once with `handleViewOnce()` which downloads it and recovers it from the sender's own copy when WhatsApp withholds the keys
 - **AI Groups Support** — Create and manage WhatsApp's AI-powered group type
 - **Cross-Platform Interop** — Third-party integrator management (BirdyChat, Haiket, and more)
 - **Enhanced Stability** — Improved connection handling, socket end handlers, `ev.destroy()` on close, cleaner pre-key retry logic
@@ -483,6 +487,55 @@ async function resolveLid(lidJid, sock, lidPhoneCache) {
 
 ---
 
+## 📲 Pairing Handler
+
+Generate a WhatsApp pairing code and get a ready-to-use session ID when the user links — one function call, no socket boilerplate. The handler requests the code as soon as the socket is ready (no artificial delays), checks the number is on WhatsApp without blocking the code, re-registers the **same** code if the connection drops, and builds the session ID (base64 `creds.json`) once paired.
+
+> [!NOTE]
+> `startPairing` is a toxic-baileys utility — it only exists in this fork. The default browser fingerprint is Android/Chrome, the same one Toxic-MD runs, and it pairs fine from any phone.
+
+<details>
+<summary>Pairing example</summary>
+
+```js
+import { startPairing, isPairingActive } from '@whiskeysockets/baileys'
+
+const number = '254712345678'
+
+if (isPairingActive(number)) {
+    console.log('A pairing for this number is already running')
+} else {
+    await startPairing(number, {
+        onCode: (code) => {
+            console.log('Pairing code:', code)
+        },
+        onConnected: ({ sessionId, userJid }) => {
+            console.log('Paired:', userJid)
+            console.log('Session ID:', sessionId)
+        },
+        onError: (error) => {
+            console.error('Pairing failed:', error.message)
+        }
+    })
+}
+```
+
+Options:
+
+- `authDir` — folder for the temporary auth state (default: a temp folder that is deleted after pairing)
+- `timeoutMs` — give up after this long (default: 420000)
+- `browser` — linked-device fingerprint (default: `Browsers.android('Chrome')`)
+- `newsletterJid` — optional channel JID to follow right after pairing, e.g. `120363425667150709@newsletter`
+- `onCode(code)` — called once with the pairing code
+- `onConnected({ sessionId, userJid, number })` — called after a successful link; `sessionId` is the base64 session you can store and reuse
+- `onError(error)` — called if pairing fails or times out
+
+One pairing per number runs at a time — a second call for the same number fails fast with an error. `isPairingActive(number)` tells you if one is already running, and `buildSessionId(authDir)` builds a session ID from any existing auth folder.
+
+</details>
+
+---
+
 ## 🖼️ Chat Wallpaper
 
 Set a custom wallpaper (chat theme image) for a group. The image is uploaded as encrypted media and applied with a `CHAT_THEME_SETTING` protocol message, so every member sees the new background.
@@ -561,6 +614,52 @@ await setGroupWallpaper(sock, jid, buffer);
 `dimLevel` controls how much the image is dimmed behind the chat (0 = no dimming). `jid` is the group JID, e.g. `120363000000000000@g.us`.
 
 </details>
+
+---
+
+## 👁️ View Once
+
+### Sending view once
+
+Add `viewOnce: true` to any image, video or audio message:
+
+```js
+await sock.sendMessage(jid, { image: fs.readFileSync('./img.jpg'), viewOnce: true })
+await sock.sendMessage(jid, { video: fs.readFileSync('./vid.mp4'), viewOnce: true })
+await sock.sendMessage(jid, { audio: fs.readFileSync('./voice.ogg'), ptt: true, viewOnce: true })
+```
+
+### Handling incoming view once
+
+Use `handleViewOnce` — it watches incoming messages, detects view-once media, downloads it, and hands you the buffer. When WhatsApp withholds the media keys (the "unavailable" stub some phone-sent view-once arrives as), it automatically recovers the media from the sender's own keyed copy that arrives alongside it.
+
+> [!NOTE]
+> `handleViewOnce` is a toxic-baileys utility — it only exists in this fork.
+
+```js
+import { handleViewOnce } from '@whiskeysockets/baileys'
+
+const handler = handleViewOnce(sock, {
+    onViewOnce: async ({ buffer, type, sender, chatJid, via }) => {
+        console.log('View-once recovered:', type, 'from', sender, 'in', chatJid, 'via', via)
+        await sock.sendMessage(sock.user.id, { image: buffer })
+    },
+    onError: (error) => console.log('View-once failed:', error.message)
+})
+
+// later, to stop listening:
+handler.stop()
+```
+
+Options:
+
+- `onViewOnce(result)` — called with `{ key, chatJid, sender, type, buffer, mimetype, caption, message, via }`; `via` is `'direct'` when the view-once itself carried keys, or `'sender-copy'` when it was recovered from the sender's own copy
+- `onError(error, message)` — called when a view-once cannot be recovered
+- `senderCopyWindowMs` — how long sender copies stay available for recovery (default: 300000)
+- `senderCopyWaitMs` — how long to wait for a sender copy to arrive before giving up (default: 5000)
+- `includeOwn` — also process your own outgoing view-once (default: false)
+
+Lower-level pieces are exported too if you want to build your own flow: `getViewOnceMedia(content)` detects view-once media (wrapper or inline flag) and returns `{ type, media }`, and `downloadViewOnceMessage(sock, message)` downloads one view-once message directly, returning `null` when it carries no keys.
 
 ---
 
