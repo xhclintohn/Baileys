@@ -360,6 +360,16 @@ export type MessageRelayOptions = MinimalRelayOptions & {
     additionalNodes?: BinaryNode[];
     useUserDevicesCache?: boolean;
     statusJidList?: string[];
+    isSecret?: boolean;
+    protected?: boolean;
+    me?: boolean;
+};
+export type ChatThemeColorOptions = {
+    backgroundLightArgb?: number;
+    backgroundDarkArgb?: number;
+    colorLight?: string;
+    colorDark?: string;
+    isDoodleEnabled?: boolean;
 };
 export type MiscMessageGenerationOptions = MinimalRelayOptions & {
     logger?: ILogger;
