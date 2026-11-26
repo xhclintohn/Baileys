@@ -1,3 +1,10 @@
+# 1.8.5 (2026-11-26)
+
+### Features
+- **Pairing handler** — `startPairing(number, options)` generates a pairing code fast (requested on the QR event with no artificial delay, the on-WhatsApp check raced against a 1.5s cap so it cannot block the code), re-registers the same code across reconnects so the code the user already has stays valid, and hands back a base64 session ID on connect through `onConnected`. Also exports `isPairingActive(number)` and `buildSessionId(authDir)`. See the Pairing Handler section in the README for a full example.
+- **WMex Argo responses** — when WhatsApp answers a WMex query with an Argo-encoded payload (mobile/Android platform clients), `executeWMexQuery` now throws a clear Boom carrying the raw buffer instead of crashing on JSON.parse, and `newsletterMetadata` recovers the channel JID from the Argo payload so invite lookups keep working.
+- **View-once handler** — `handleViewOnce(sock, options)` watches incoming messages, detects view-once media, downloads it, and recovers it from the sender's own keyed copy when WhatsApp withholds the keys (the unavailable-stub case). Also exports `getViewOnceMedia(content)` and `downloadViewOnceMessage(sock, message)`. The README now covers sending view-once and handling incoming view-once end to end.
+
 # 1.8.4 (2026-11-25)
 
 ### Features
