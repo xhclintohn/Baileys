@@ -1,6 +1,6 @@
 import { Mutex } from 'async-mutex'
 import { randomBytes } from 'crypto'
-import { mkdir, readFile, rename, stat, unlink, writeFile } from 'fs/promises'
+import { mkdir, readdir, readFile, rename, stat, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { proto } from '../../WAProto/index.js'
 import type { AuthenticationCreds, AuthenticationState, SignalDataTypeMap } from '../Types'
@@ -39,9 +39,15 @@ const renameWithRetry = async (from: string, to: string, attempts = RENAME_ATTEM
 	}
 }
 
+export type MultiFileAuthStateOptions = {
+	maxPreKeys?: number
+}
+
 export const useMultiFileAuthState = async (
-	folder: string
+	folder: string,
+	options: MultiFileAuthStateOptions = {}
 ): Promise<{ state: AuthenticationState; saveCreds: () => Promise<void> }> => {
+	const { maxPreKeys = 0 } = options
 	const writeData = async (data: any, file: string) => {
 		const filePath = join(folder, fixFileName(file)!)
 		const mutex = getFileLock(filePath)
@@ -113,6 +119,26 @@ export const useMultiFileAuthState = async (
 
 	const fixFileName = (file?: string) => file?.replace(/\//g, '__')?.replace(/:/g, '-')
 
+	const prunePreKeys = async () => {
+		if (!maxPreKeys || maxPreKeys <= 0) {
+			return
+		}
+
+		const files = await readdir(folder).catch(() => [] as string[])
+		const preKeys = files.filter(f => f.startsWith('pre-key-') && f.endsWith('.json'))
+		if (preKeys.length <= maxPreKeys + 20) {
+			return
+		}
+
+		const parsed = preKeys
+			.map(f => ({ f, id: parseInt(f.slice('pre-key-'.length, -'.json'.length), 10) }))
+			.filter(r => Number.isFinite(r.id))
+			.sort((a, b) => b.id - a.id)
+		await Promise.all(parsed.slice(maxPreKeys).map(r => removeData(r.f)))
+	}
+
+	await prunePreKeys()
+
 	const creds: AuthenticationCreds = (await readData('creds.json')) || initAuthCreds()
 
 	return {
@@ -136,7 +162,12 @@ export const useMultiFileAuthState = async (
 				},
 				set: async data => {
 					const tasks: Promise<void>[] = []
+					let hasPreKeyUpdates = false
 					for (const category in data) {
+						if (category === 'pre-key') {
+							hasPreKeyUpdates = true
+						}
+
 						for (const id in data[category as keyof SignalDataTypeMap]) {
 							const value = data[category as keyof SignalDataTypeMap]![id]
 							const file = `${category}-${id}.json`
@@ -145,6 +176,9 @@ export const useMultiFileAuthState = async (
 					}
 
 					await Promise.all(tasks)
+					if (hasPreKeyUpdates) {
+						await prunePreKeys()
+					}
 				}
 			}
 		},
