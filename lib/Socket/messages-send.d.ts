@@ -47,6 +47,20 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     cancelPaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
     sendPaymentInvite: (jid: string, options?: PaymentInviteOptions) => Promise<import("../Types").PaymentResult>;
     sendStickerPack: (jid: string, pack: StickerPack) => Promise<import("../Types").StickerPackResult>;
+    reportSpam: {
+        (jid: string, options?: import("../Types").SpamReportOptions): Promise<import("../Types").SpamReportTargetResult>;
+        (messages: WAMessage[], options?: import("../Types").SpamReportOptions): Promise<import("../Types").SpamReportResult[]>;
+    };
+    reportTarget: (jid: string, options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportTargetResult>;
+    reportContact: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
+    reportGroup: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
+    reportStatus: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
+    reportNewsletter: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
+    reportChannelStatus: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
+    reportEvent: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
+    reportAndBlock: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
+    SPAM_FLOWS: typeof import("../Types").SPAM_FLOWS;
+    SPAM_REPORT_REASONS: typeof import("../Types").SPAM_REPORT_REASONS;
     sendChannelStatus: (jid: string, content: AnyMessageContent, options?: ChannelStatusOptions) => Promise<ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;
