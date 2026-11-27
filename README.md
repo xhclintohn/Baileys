@@ -102,6 +102,7 @@ A quick tour of what you get out of the box
 - **Extended Message Types** — Interactive, album, event, poll result, group status, payment, product
 - **Advanced Group Management** — Group controls, group status V2, communities support
 - **Flexible Auth** — Multi-file auth state with `makeCacheableSignalKeyStore`
+- **Compact Sessions** — `useSqliteAuthState()` keeps your whole session in one small database file instead of thousands of JSON files, prunes old pre-keys automatically, and can migrate an existing multi-file session without re-pairing
 - **Full Newsletter/Channel API** — Follow, create, metadata, `newsletterId()` helper, fixed join/leave v2 endpoints
 - **Developer Friendly** — `toxicHandler` and `ToxicHandler` exposed on socket, `fetchAccountReachoutTimelock`, `fetchNewChatMessageCap`, `registerSocketEndHandler`, clean API
 - **WebSocket Improvements** — `perMessageDeflate: false`, 100 MB max payload
@@ -280,6 +281,29 @@ const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
 const sock = makeWASocket({ auth: state });
 sock.ev.on('creds.update', saveCreds);
 ```
+
+> Tip: pass `{ maxPreKeys: 100 }` as the second argument to automatically delete old pre-key files and keep the folder small: `useMultiFileAuthState('./auth_info', { maxPreKeys: 100 })`.
+</details>
+
+<details>
+<summary>Compact SQLite Auth (Recommended)</summary>
+
+One database file instead of thousands of JSON files. Old pre-keys are pruned automatically (newest 100 kept by default), the file compacts itself when it grows, and you can migrate an existing multi-file session in place — no re-pairing needed. Needs Node 22.5+ (uses the built-in `node:sqlite`, no extra packages).
+
+```javascript
+import makeWASocket, { useSqliteAuthState } from 'toxic-baileys';
+
+// Fresh session, stored in ./auth_info/auth.db
+const { state, saveCreds } = await useSqliteAuthState('./auth_info');
+
+// Or migrate an existing multi-file session folder (creds.json + key files)
+const migrated = await useSqliteAuthState('./auth_info', { migrateFromFolder: './auth_info' });
+
+const sock = makeWASocket({ auth: state });
+sock.ev.on('creds.update', saveCreds);
+```
+
+Options: `maxPreKeys` (default `100`, set `0` to keep everything), `compactThresholdBytes` (default 3 MB — the database vacuums itself on startup when bigger), and `encryptionKey` (a passphrase or 32-byte Buffer to encrypt the session at rest with AES-256-GCM; pass the same key every time you open it).
 </details>
 
 <details>
@@ -1160,6 +1184,25 @@ await sock.sendMessage(groupJid, {
  }
 });
 ```
+</details>
+
+<details>
+<summary>Post your own status to groups and private contacts</summary>
+
+`sendStatusMention` posts a status (story) from your own account and builds the audience for you: pass group JIDs and it expands them to their participants, pass user JIDs and they are added directly. Works for text, image, video and audio (voice-note style) statuses.
+
+```javascript
+// Text status seen by a whole group + one private contact
+await sock.sendStatusMention({ text: 'New update is live!' }, [groupJid, '2547xxxxxxxx@s.whatsapp.net']);
+
+// Image status
+await sock.sendStatusMention({ image: fs.readFileSync('./banner.jpg'), caption: 'Promo' }, [groupJid]);
+
+// Audio status (voice note style)
+await sock.sendStatusMention({ audio: fs.readFileSync('./note.mp3') }, [groupJid]);
+```
+
+For full manual control you can also send to `status@broadcast` yourself and pass `statusJidList` in the message options to choose exactly who receives it.
 </details>
 
 ### Payment Request Messages

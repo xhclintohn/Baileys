@@ -1,3 +1,10 @@
+# 1.8.8 (2026-11-27)
+
+### Features
+- **Compact sessions** — `useSqliteAuthState()` is now fully shipped (it existed in the source but was never compiled into the package). Your whole session lives in one small SQLite database file (built-in `node:sqlite`, Node 22.5+, no extra packages) instead of thousands of JSON files. Old pre-keys are pruned automatically (`maxPreKeys`, default 100), the database compacts itself on startup when it passes `compactThresholdBytes` (default 3 MB), and an optional `encryptionKey` encrypts the session at rest with AES-256-GCM. Existing multi-file sessions migrate in place with `migrateFromFolder` — no re-pairing. The returned object also exposes `compact()` and `prunePreKeys()` helpers.
+- **Pre-key pruning for multi-file sessions** — `useMultiFileAuthState(folder, { maxPreKeys: 100 })` now optionally deletes old pre-key files beyond the newest N, so long-running bots stop accumulating thousands of dead key files. Off by default.
+- **Status docs** — the README now documents posting your own status to groups and private contacts with `sendStatusMention` (group JIDs expand to participants) and choosing a status audience with `statusJidList`.
+
 # 1.8.7 (2026-11-26)
 
 ### Features
