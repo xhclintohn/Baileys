@@ -14,6 +14,7 @@ export * from './ChannelStatus'
 export * from './Payment'
 export * from './StickerPack'
 export * from './Mex'
+export * from './Report'
 
 export type { NewsletterCreateResponse, NewsletterMetadata, NewsletterUpdate, NewsletterViewRole } from './Newsletter'
 
