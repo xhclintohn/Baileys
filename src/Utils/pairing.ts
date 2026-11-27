@@ -93,7 +93,7 @@ export const startPairing = async (number: string, options: PairingOptions = {})
 		try {
 			mkdirSync(authDir, { recursive: true })
 			const { state, saveCreds } = await useMultiFileAuthState(authDir)
-			const { default: makeWASocket } = await import('../Socket/index')
+			const { default: makeWASocket } = await import('../Socket/index.js')
 
 			if (sock?.ev) {
 				try { sock.ev.removeAllListeners('connection.update') } catch {}
