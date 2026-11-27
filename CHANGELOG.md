@@ -1,3 +1,8 @@
+# 1.9.0 (2026-11-27)
+
+### Features
+- **Reporting suite** — report spam the way the official app does. `sock.reportSpam(messages)` sends one report per message with the verifiable message content attached and returns the server's `reportId` for each; `sock.reportSpam(jid)` (or `sock.reportTarget(jid)`) reports a contact, group or channel by JID in a single report. Ready-made wrappers cover the common cases: `reportContact`, `reportGroup`, `reportStatus`, `reportNewsletter`, `reportChannelStatus`, `reportEvent`, and `reportAndBlock` for the report-and-block action. All 36 official report flows are exported as `SPAM_FLOWS` (plus `SPAM_REPORT_REASONS`), so reports land in the right review queue. Reporting alone blocks nobody — the reported account receives nothing.
+
 # 1.8.9 (2026-11-27)
 
 ### Features
