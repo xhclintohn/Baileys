@@ -103,6 +103,7 @@ A quick tour of what you get out of the box
 - **Advanced Group Management** — Group controls, group status V2, communities support
 - **Flexible Auth** — Multi-file auth state with `makeCacheableSignalKeyStore`
 - **Compact Sessions** — `useSqliteAuthState()` keeps your whole session in one small database file instead of thousands of JSON files, prunes old pre-keys automatically, and can migrate an existing multi-file session without re-pairing
+- **Sound Stickers** — stickers with audio decode as a normal `stickerMessage` with the audio attached, instead of arriving as empty messages
 - **Full Newsletter/Channel API** — Follow, create, metadata, `newsletterId()` helper, fixed join/leave v2 endpoints
 - **Developer Friendly** — `toxicHandler` and `ToxicHandler` exposed on socket, `fetchAccountReachoutTimelock`, `fetchNewChatMessageCap`, `registerSocketEndHandler`, clean API
 - **WebSocket Improvements** — `perMessageDeflate: false`, 100 MB max payload

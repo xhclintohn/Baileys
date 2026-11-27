@@ -1,3 +1,9 @@
+# 1.8.9 (2026-11-27)
+
+### Features
+- **Sound stickers** — stickers with audio now decode properly instead of arriving as empty messages. The proto definitions gained the sound-sticker fields (`Message.audioStickerMessage` wrapper, plus `premium`, `emojis` and `audioMessage` inside `StickerMessage`), and incoming sound stickers unwrap to a regular `stickerMessage` with the audio attached, so `getContentType` and media downloads work as usual.
+- **Proto tooling fix** — `WAProto/GenerateStatics.sh` now runs from its own folder, so regenerating the proto definitions works from the repo root (it previously failed with a missing-file error). The `WAProto.proto` text was also synced with the shipped definitions for the sound-sticker fields.
+
 # 1.8.8 (2026-11-27)
 
 ### Features
