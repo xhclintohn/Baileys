@@ -1,0 +1,112 @@
+import type { BinaryNode } from '../WABinary'
+import type { WAMessage } from './Message'
+
+export const SPAM_FLOWS = {
+	CHAT: 'chat',
+	MESSAGE_MENU: 'message_menu',
+	OVERFLOW_MENU: 'overflow_menu_report',
+	ACCOUNT_INFO: 'account_info_report',
+	ONE_TO_ONE_SPAM_BANNER: '1_1_spam_banner_report',
+	GROUP_INFO: 'group_info_report',
+	GROUP_SPAM_BANNER: 'group_spam_banner_report',
+	STATUS_POST: 'status_post_report',
+	NEWSLETTER_INFO: 'newsletter_info_report',
+	WAMO_CHANNEL: 'wamo_channel_report',
+	CHANNEL_STATUS: 'channel_status_report',
+	EVENT_INFO: 'event_info_report',
+	EVENT_HOME: 'event_home_report',
+	ACCOUNT_INFO_REPORT_AS_GUEST_USER: 'account_info_report_as_guest_user',
+	ALBUM_MEDIA_MENU_REPORT: 'album_media_menu_report',
+	CALL_DETAIL_OVERFLOW_REPORT: 'call_detail_overflow_report',
+	CALL_DETAIL_SAFETY_TOOLS_REPORT: 'call_detail_safety_tools_report',
+	CALL_SPAM_DIALOG_REPORT: 'call_spam_dialog_report',
+	CHAT_FMX_CARD_REPORT_AS_GUEST_USER: 'chat_fmx_card_report_as_guest_user',
+	CHAT_FMX_CARD_SAFETY_TOOLS_REPORT: 'chat_fmx_card_safety_tools_report',
+	CHAT_FMX_CARD_SAFETY_TOOLS_REPORT_SUSPICIOUS: 'chat_fmx_card_safety_tools_report_suspicious',
+	CHAT_LIST_SWIPE_DELETE_REPORT_UPSELL: 'chat_list_swipe_delete_report_upsell',
+	CHAT_THEME_SCREEN_OVERFLOW_MENU_REPORT: 'chat_theme_screen_overflow_menu_report',
+	DEPENDANT_CHAT_REQUEST_BANNER_DECLINE_REPORT_UPSELL: 'dependant_chat_request_banner_decline_report_upsell',
+	EXTENSION_MENU_REPORT: 'extension_menu_report',
+	GROUP_CHATLIST_LEAVE_REPORT_UPSELL: 'group_chatlist_leave_report_upsell',
+	GROUP_CHATLIST_SWIPE_LEAVE_REPORT_UPSELL: 'group_chatlist_swipe_leave_report_upsell',
+	GROUP_INFO_LEAVE_REPORT_UPSELL: 'group_info_leave_report_upsell',
+	GROUP_OVERFLOW_MENU_LEAVE_REPORT_UPSELL: 'group_overflow_menu_leave_report_upsell',
+	GUEST_CALL_PARTICIPANT_REPORT: 'guest_call_participant_report',
+	GUEST_CALL_REPORT: 'guest_call_report',
+	IAB_MENU_REPORT: 'iab_menu_report',
+	LEFT_GROUP_SPAM_BANNER_REPORT: 'left_group_spam_banner_report',
+	NEWSLETTER_QUESTION_RESPONSE_REPORT: 'newsletter_question_response_report',
+	OVERFLOW_MENU_COMMUNITY_REPORT: 'overflow_menu_community_report',
+	PAYMENT_TRANSACTION_REPORT: 'payment_transaction_report',
+	USER_INITIATED_CHAT_FMX_CARD_SAFETY_TOOLS_REPORT: 'user_initiated_chat_fmx_card_safety_tools_report',
+	USER_INITIATED_CHAT_SUSPICIOUS_BANNER_SAFETY_TOOLS_REPORT: 'user_initiated_chat_suspicious_banner_safety_tools_report',
+	ACCOUNT_INFO_SCREEN: 'account_info',
+	GROUP_INFO_SCREEN: 'group_info',
+	OVERFLOW_MENU_SCREEN: 'overflow_menu',
+	CALL_LOG: 'call_log',
+	MEDIA_VIEWER: 'media_viewer',
+	COMMUNITY_HOME: 'community_home',
+	ENT_CLIENT: 'ent_client',
+	FRX: 'frx',
+	STATUS_QUESTION_ANSWER: 'status_question_answer',
+	VIEW_ONCE_VIEWER: 'view_once_viewer',
+	COMMENT_ACTIONS_BOTTOM_SHEET: 'comment_actions_bottom_sheet',
+	Chat: 'chat',
+	MessageMenu: 'message_menu',
+	OverflowMenuReport: 'overflow_menu_report',
+	AccountInfoReport: 'account_info_report',
+	ContactInfo: 'account_info_report',
+	ChatInfoReport: 'account_info_report',
+	OneToOneSpamBannerReport: '1_1_spam_banner_report',
+	GroupInfoReport: 'group_info_report',
+	GroupSpamBannerReport: 'group_spam_banner_report',
+	StatusPostReport: 'status_post_report',
+	StatusReport: 'status_post_report',
+	NewsletterInfoReport: 'newsletter_info_report',
+	WamoChannelReport: 'wamo_channel_report',
+	ChannelStatusReport: 'channel_status_report',
+	EventInfoReport: 'event_info_report',
+	EventHomeReport: 'event_home_report'
+} as const
+
+export type SpamFlow = (typeof SPAM_FLOWS)[keyof typeof SPAM_FLOWS]
+
+export const SPAM_REPORT_REASONS = {
+	NO_LONGER_INTERESTED: 1,
+	NO_SIGN_UP: 2,
+	SPAM: 3,
+	OFFENSIVE_MESSAGES: 4,
+	OTP_DID_NOT_REQUEST: 5,
+	SCAM_OR_FRAUD: 6
+} as const
+
+export type SpamReportReason = (typeof SPAM_REPORT_REASONS)[keyof typeof SPAM_REPORT_REASONS]
+
+export type SpamReportOptions = {
+	spamFlow?: SpamFlow
+	flow?: SpamFlow
+	traceId?: string
+	groupJid?: string
+	groupSubject?: string
+	source?: string
+	messages?: WAMessage[]
+	reason?: SpamReportReason
+}
+
+export type SpamReportResult = {
+	reportId: string | null
+	messageId: string
+}
+
+export type SpamReportTargetResult = {
+	jid: string
+	flow: SpamFlow
+	reported: boolean
+	reportId: string | null
+	node: BinaryNode
+}
+
+export type SpamReportTarget = {
+	jid: string
+	messages: WAMessage[]
+}

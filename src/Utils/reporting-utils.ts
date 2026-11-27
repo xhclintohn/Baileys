@@ -308,6 +308,9 @@ const encodeVarint = (value: number): Buffer => {
 	return Buffer.from(parts)
 }
 
+export const extractReportingTokenContentForMessage = (msgProtobuf: Buffer): Buffer | null =>
+	extractReportingTokenContent(msgProtobuf, compiledReportingFields)
+
 export const getMessageReportingToken = async (
 	msgProtobuf: Buffer,
 	message: WAMessageContent,

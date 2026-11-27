@@ -54,6 +54,18 @@ import { getUrlInfo } from '../Utils/link-preview'
 import { makeKeyedMutex, makeMutex } from '../Utils/make-mutex'
 import { getMessageReportingToken, shouldIncludeReportingToken } from '../Utils/reporting-utils'
 import {
+	reportAndBlock,
+	reportChannelStatus,
+	reportContact,
+	reportEvent,
+	reportGroup,
+	reportNewsletter,
+	reportSpam,
+	reportStatus,
+	reportTarget
+} from './report'
+import { SPAM_FLOWS, SPAM_REPORT_REASONS, type SpamReportOptions } from '../Types/Report'
+import {
         buildMergedTcTokenIndexWrite,
         isTcTokenExpired,
         resolveIssuanceJid,
@@ -1856,6 +1868,20 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		meJid: authState.creds.me?.id
 	}
 
+	const reportDeps = {
+		query,
+		meJid: authState.creds.me?.id,
+		updateBlockStatus: sock.updateBlockStatus
+	}
+
+	const reportSpamSocket = ((targetOrMessages: string | WAMessage[], options: SpamReportOptions = {}) =>
+		typeof targetOrMessages === 'string'
+			? reportTarget(targetOrMessages, reportDeps, options)
+			: reportSpam(targetOrMessages, reportDeps, options)) as {
+		(jid: string, options?: SpamReportOptions): ReturnType<typeof reportTarget>
+		(messages: WAMessage[], options?: SpamReportOptions): ReturnType<typeof reportSpam>
+	}
+
 	const deleteMessage = async (jid: string, key: WAMessageKey) => {
 		const fullMsg = await generateWAMessage(
 			jid,
@@ -2048,6 +2074,24 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 sendPaymentInvite: (jid: string, options: PaymentInviteOptions = {}) =>
                         sendPaymentInvite(jid, options, paymentDeps),
                 sendStickerPack: (jid: string, pack: StickerPack) => sendStickerPack(jid, pack, stickerPackDeps),
+                reportSpam: reportSpamSocket,
+                reportTarget: (jid: string, options: SpamReportOptions = {}) => reportTarget(jid, reportDeps, options),
+                reportContact: (jid: string, messages: WAMessage[], options: SpamReportOptions = {}) =>
+                        reportContact(jid, messages, reportDeps, options),
+                reportGroup: (jid: string, messages: WAMessage[], options: SpamReportOptions = {}) =>
+                        reportGroup(jid, messages, reportDeps, options),
+                reportStatus: (jid: string, messages: WAMessage[], options: SpamReportOptions = {}) =>
+                        reportStatus(jid, messages, reportDeps, options),
+                reportNewsletter: (jid: string, messages: WAMessage[], options: SpamReportOptions = {}) =>
+                        reportNewsletter(jid, messages, reportDeps, options),
+                reportChannelStatus: (jid: string, messages: WAMessage[], options: SpamReportOptions = {}) =>
+                        reportChannelStatus(jid, messages, reportDeps, options),
+                reportEvent: (jid: string, messages: WAMessage[], options: SpamReportOptions = {}) =>
+                        reportEvent(jid, messages, reportDeps, options),
+                reportAndBlock: (jid: string, messages: WAMessage[], options: SpamReportOptions = {}) =>
+                        reportAndBlock(jid, messages, reportDeps, options),
+                SPAM_FLOWS,
+                SPAM_REPORT_REASONS,
                 sendChannelStatus: (jid: string, content: AnyMessageContent, options: ChannelStatusOptions = {}) =>
                         sendChannelStatus(
                                 jid,

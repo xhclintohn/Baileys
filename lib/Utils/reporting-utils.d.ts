@@ -7,5 +7,6 @@ export type ReportingField = {
     s?: ReportingField[];
 };
 export declare const shouldIncludeReportingToken: (message: proto.IMessage) => boolean;
+export declare const extractReportingTokenContentForMessage: (msgProtobuf: Buffer) => Buffer | null;
 export declare const getMessageReportingToken: (msgProtobuf: Buffer, message: WAMessageContent, key: WAMessageKey) => Promise<BinaryNode | null>;
 //# sourceMappingURL=reporting-utils.d.ts.map

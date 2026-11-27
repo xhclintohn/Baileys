@@ -1,3 +1,21 @@
+# 1.9.0 (2026-11-27)
+
+### Features
+- **Reporting suite** — report spam the way the official app does. `sock.reportSpam(messages)` sends one report per message with the verifiable message content attached and returns the server's `reportId` for each; `sock.reportSpam(jid)` (or `sock.reportTarget(jid)`) reports a contact, group or channel by JID in a single report. Ready-made wrappers cover the common cases: `reportContact`, `reportGroup`, `reportStatus`, `reportNewsletter`, `reportChannelStatus`, `reportEvent`, and `reportAndBlock` for the report-and-block action. All 36 official report flows are exported as `SPAM_FLOWS` (plus `SPAM_REPORT_REASONS`), so reports land in the right review queue. Reporting alone blocks nobody — the reported account receives nothing.
+
+# 1.8.9 (2026-11-27)
+
+### Features
+- **Sound stickers** — stickers with audio now decode properly instead of arriving as empty messages. The proto definitions gained the sound-sticker fields (`Message.audioStickerMessage` wrapper, plus `premium`, `emojis` and `audioMessage` inside `StickerMessage`), and incoming sound stickers unwrap to a regular `stickerMessage` with the audio attached, so `getContentType` and media downloads work as usual.
+- **Proto tooling fix** — `WAProto/GenerateStatics.sh` now runs from its own folder, so regenerating the proto definitions works from the repo root (it previously failed with a missing-file error). The `WAProto.proto` text was also synced with the shipped definitions for the sound-sticker fields.
+
+# 1.8.8 (2026-11-27)
+
+### Features
+- **Compact sessions** — `useSqliteAuthState()` is now fully shipped (it existed in the source but was never compiled into the package). Your whole session lives in one small SQLite database file (built-in `node:sqlite`, Node 22.5+, no extra packages) instead of thousands of JSON files. Old pre-keys are pruned automatically (`maxPreKeys`, default 100), the database compacts itself on startup when it passes `compactThresholdBytes` (default 3 MB), and an optional `encryptionKey` encrypts the session at rest with AES-256-GCM. Existing multi-file sessions migrate in place with `migrateFromFolder` — no re-pairing. The returned object also exposes `compact()` and `prunePreKeys()` helpers.
+- **Pre-key pruning for multi-file sessions** — `useMultiFileAuthState(folder, { maxPreKeys: 100 })` now optionally deletes old pre-key files beyond the newest N, so long-running bots stop accumulating thousands of dead key files. Off by default.
+- **Status docs** — the README now documents posting your own status to groups and private contacts with `sendStatusMention` (group JIDs expand to participants) and choosing a status audience with `statusJidList`.
+
 # 1.8.7 (2026-11-26)
 
 ### Features

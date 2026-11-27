@@ -1,5 +1,8 @@
 import type { AuthenticationState } from '../Types/index.js';
-export declare const useMultiFileAuthState: (folder: string) => Promise<{
+export type MultiFileAuthStateOptions = {
+    maxPreKeys?: number;
+};
+export declare const useMultiFileAuthState: (folder: string, options?: MultiFileAuthStateOptions) => Promise<{
     state: AuthenticationState;
     saveCreds: () => Promise<void>;
 }>;
