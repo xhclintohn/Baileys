@@ -1,6 +1,6 @@
 import { Boom } from '@hapi/boom';
 import { proto } from '../../WAProto/index.js';
-import type { AnyMessageContent, MediaConnInfo, MessageReceiptType, ChatThemeColorOptions, MessageRelayOptions, MiscMessageGenerationOptions, PaymentInviteOptions, RequestPaymentOptions, SendPaymentOptions, SocketConfig, StickerPack, WAMessage, WAMessageKey } from '../Types/index.js';
+import type { AnyMessageContent, MediaConnInfo, MessageReceiptType, ChatThemeColorOptions, ChatWallpaperOptions, MessageRelayOptions, MiscMessageGenerationOptions, PaymentInviteOptions, RequestPaymentOptions, SendPaymentOptions, SocketConfig, StickerPack, WAMessage, WAMessageKey } from '../Types/index.js';
 import { MessageRetryManager } from '../Utils/index.js';
 import { type BinaryNode, type JidWithDevice } from '../WABinary/index.js';
 import { USyncQuery } from '../WAUSync/index.js';
@@ -33,6 +33,7 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     setChatTheme: (jid: string, theme: string | proto.Message.IChatThemeSetting, options?: MessageRelayOptions) => Promise<string>;
     setChatThemeColor: (jid: string, colorOptions?: ChatThemeColorOptions, options?: MessageRelayOptions) => Promise<string>;
     clearChatTheme: (jid: string, options?: MessageRelayOptions) => Promise<string>;
+    setChatWallpaper: (jid: string, image: Buffer | { url: string } | proto.Message.IChatCustomImageWallpaper, options?: ChatWallpaperOptions & MessageRelayOptions) => Promise<string>;
     toxicHandler: ToxicHandler;
     sendStatusMention: (content: Record<string, any>, jids?: string[]) => Promise<WAMessage>;
     sendGroupStatus: (jid: string, content: AnyMessageContent, options?: GroupStatusOptions) => Promise<WAMessage>;
@@ -47,20 +48,6 @@ export declare const makeMessagesSocket: (config: SocketConfig) => {
     cancelPaymentRequest: (jid: string, key: WAMessageKey) => Promise<import("../Types").PaymentResult>;
     sendPaymentInvite: (jid: string, options?: PaymentInviteOptions) => Promise<import("../Types").PaymentResult>;
     sendStickerPack: (jid: string, pack: StickerPack) => Promise<import("../Types").StickerPackResult>;
-    reportSpam: {
-        (jid: string, options?: import("../Types").SpamReportOptions): Promise<import("../Types").SpamReportTargetResult>;
-        (messages: WAMessage[], options?: import("../Types").SpamReportOptions): Promise<import("../Types").SpamReportResult[]>;
-    };
-    reportTarget: (jid: string, options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportTargetResult>;
-    reportContact: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
-    reportGroup: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
-    reportStatus: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
-    reportNewsletter: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
-    reportChannelStatus: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
-    reportEvent: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
-    reportAndBlock: (jid: string, messages: WAMessage[], options?: import("../Types").SpamReportOptions) => Promise<import("../Types").SpamReportResult[]>;
-    SPAM_FLOWS: typeof import("../Types").SPAM_FLOWS;
-    SPAM_REPORT_REASONS: typeof import("../Types").SPAM_REPORT_REASONS;
     sendChannelStatus: (jid: string, content: AnyMessageContent, options?: ChannelStatusOptions) => Promise<ChannelStatusSent>;
     updateMediaMessage: (message: WAMessage) => Promise<WAMessage>;
     sendMessage: (jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions) => Promise<string | WAMessage | undefined>;
