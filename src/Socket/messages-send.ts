@@ -1,5 +1,6 @@
 import NodeCache from '@cacheable/node-cache'
 import { randomBytes, randomUUID } from 'crypto'
+import { unlink } from 'fs/promises'
 import { Boom } from '@hapi/boom'
 import { proto } from '../../WAProto/index.js'
 import { DEFAULT_CACHE_TTLS, WA_DEFAULT_EPHEMERAL } from '../Defaults'
@@ -8,6 +9,7 @@ import type {
         MediaConnInfo,
         MessageReceiptType,
         ChatThemeColorOptions,
+        ChatWallpaperOptions,
         MessageRelayOptions,
         MiscMessageGenerationOptions,
         PaymentInviteOptions,
@@ -30,6 +32,7 @@ import {
         encodeWAMessage,
         encryptMediaRetryRequest,
         encryptPollVote,
+        encryptedStream,
         extractDeviceJids,
         generateBotHtmlResponse,
         generateMessageID,
@@ -481,7 +484,16 @@ export const makeMessagesSocket = (config: SocketConfig) => {
         }
 
         const setChatThemeColor = (jid: string, colorOptions: ChatThemeColorOptions = {}, options: MessageRelayOptions = {}) => {
-                const toHexColor = (argb: number) => (argb >>> 0).toString(16).padStart(8, '0').toUpperCase()
+                const toArgb = (value?: number | string) => {
+                        if (value === undefined) return undefined
+                        if (typeof value === 'number') return value >>> 0
+                        const cleaned = value.trim().replace(/^#/, '')
+                        const parsed = parseInt(cleaned, 16)
+                        if (Number.isNaN(parsed)) return undefined
+                        return (cleaned.length <= 6 ? 0xff000000 | parsed : parsed) >>> 0
+                }
+                const backgroundLightArgb = toArgb(colorOptions.backgroundLightArgb ?? colorOptions.colorLight) ?? 0xffff0000
+                const backgroundDarkArgb = toArgb(colorOptions.backgroundDarkArgb ?? colorOptions.colorDark) ?? backgroundLightArgb
                 return relayMessage(
                         jid,
                         {
@@ -490,8 +502,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                         chatThemeSetting: {
                                                 settingTimestampMs: Date.now(),
                                                 solidColor: {
-                                                        colorLight: colorOptions.colorLight ?? toHexColor(colorOptions.backgroundLightArgb ?? 0xffff0000),
-                                                        colorDark: colorOptions.colorDark ?? toHexColor(colorOptions.backgroundDarkArgb ?? 0xffff0000),
+                                                        backgroundLightArgb,
+                                                        backgroundDarkArgb,
                                                         isDoodleEnabled: colorOptions.isDoodleEnabled ?? false
                                                 }
                                         }
@@ -516,6 +528,47 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                                         chatThemeSetting: {
                                                 settingTimestampMs: Date.now(),
                                                 clearTheme: true
+                                        }
+                                }
+                        },
+                        {
+                                ...options,
+                                additionalAttributes: {
+                                        type: 'media',
+                                        ...(options.additionalAttributes || {})
+                                }
+                        }
+                )
+        }
+
+        const setChatWallpaper = async (jid: string, image: Buffer | { url: string } | proto.Message.IChatCustomImageWallpaper, options: ChatWallpaperOptions & MessageRelayOptions = {}) => {
+                let customImage: proto.Message.IChatCustomImageWallpaper
+                if (Buffer.isBuffer(image) || (typeof image === 'object' && 'url' in image)) {
+                        const { mediaKey, encFilePath, fileSha256, fileEncSha256 } = await encryptedStream(image as Buffer, 'chat-wallpaper-image', { logger })
+                        let directPath: string | undefined
+                        try {
+                                const uploaded = await waUploadToServer(encFilePath, {
+                                        mediaType: 'chat-wallpaper-image',
+                                        fileEncSha256B64: fileEncSha256.toString('base64'),
+                                        timeoutMs: options.mediaUploadTimeoutMs
+                                })
+                                directPath = uploaded.directPath
+                        } finally {
+                                await unlink(encFilePath).catch(() => {})
+                        }
+                        if (!directPath) throw new Error('wallpaper upload returned no directPath')
+                        customImage = { directPath, mediaKey, fileEncSha256, fileSha256, dimLevel: options.dimLevel ?? 0 }
+                } else {
+                        customImage = { dimLevel: 0, ...image }
+                }
+                return relayMessage(
+                        jid,
+                        {
+                                protocolMessage: {
+                                        type: proto.Message.ProtocolMessage.Type.CHAT_THEME_SETTING,
+                                        chatThemeSetting: {
+                                                settingTimestampMs: options.settingTimestampMs ?? Date.now(),
+                                                customImage
                                         }
                                 }
                         },
@@ -2044,6 +2097,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
                 setChatTheme,
                 setChatThemeColor,
                 clearChatTheme,
+                setChatWallpaper,
                 toxicHandler,
                 userDevicesCache,
                 devicesMutex,
