@@ -7048,15 +7048,15 @@ export namespace proto {
         }
 
         interface IChatSolidColorWallpaper {
-            colorLight?: (string|null);
-            colorDark?: (string|null);
+            backgroundLightArgb?: (number|null);
+            backgroundDarkArgb?: (number|null);
             isDoodleEnabled?: (boolean|null);
         }
 
         class ChatSolidColorWallpaper implements IChatSolidColorWallpaper {
             constructor(p?: proto.Message.IChatSolidColorWallpaper);
-            public colorLight?: (string|null);
-            public colorDark?: (string|null);
+            public backgroundLightArgb?: (number|null);
+            public backgroundDarkArgb?: (number|null);
             public isDoodleEnabled?: (boolean|null);
             public static create(properties?: proto.Message.IChatSolidColorWallpaper): proto.Message.ChatSolidColorWallpaper;
             public static encode(m: proto.Message.IChatSolidColorWallpaper, w?: $protobuf.Writer): $protobuf.Writer;

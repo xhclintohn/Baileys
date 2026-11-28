@@ -50102,21 +50102,21 @@ export const proto = $root.proto = (() => {
                             this[ks[i]] = p[ks[i]];
             }
 
-            ChatSolidColorWallpaper.prototype.colorLight = null;
-            ChatSolidColorWallpaper.prototype.colorDark = null;
+            ChatSolidColorWallpaper.prototype.backgroundLightArgb = null;
+            ChatSolidColorWallpaper.prototype.backgroundDarkArgb = null;
             ChatSolidColorWallpaper.prototype.isDoodleEnabled = null;
 
             let $oneOfFields;
 
             // Virtual OneOf for proto3 optional field
-            Object.defineProperty(ChatSolidColorWallpaper.prototype, "_colorLight", {
-                get: $util.oneOfGetter($oneOfFields = ["colorLight"]),
+            Object.defineProperty(ChatSolidColorWallpaper.prototype, "_backgroundLightArgb", {
+                get: $util.oneOfGetter($oneOfFields = ["backgroundLightArgb"]),
                 set: $util.oneOfSetter($oneOfFields)
             });
 
             // Virtual OneOf for proto3 optional field
-            Object.defineProperty(ChatSolidColorWallpaper.prototype, "_colorDark", {
-                get: $util.oneOfGetter($oneOfFields = ["colorDark"]),
+            Object.defineProperty(ChatSolidColorWallpaper.prototype, "_backgroundDarkArgb", {
+                get: $util.oneOfGetter($oneOfFields = ["backgroundDarkArgb"]),
                 set: $util.oneOfSetter($oneOfFields)
             });
 
@@ -50133,10 +50133,10 @@ export const proto = $root.proto = (() => {
             ChatSolidColorWallpaper.encode = function encode(m, w) {
                 if (!w)
                     w = $Writer.create();
-                if (m.colorLight != null && Object.hasOwnProperty.call(m, "colorLight"))
-                    w.uint32(10).string(m.colorLight);
-                if (m.colorDark != null && Object.hasOwnProperty.call(m, "colorDark"))
-                    w.uint32(18).string(m.colorDark);
+                if (m.backgroundLightArgb != null && Object.hasOwnProperty.call(m, "backgroundLightArgb"))
+                    w.uint32(13).fixed32(m.backgroundLightArgb);
+                if (m.backgroundDarkArgb != null && Object.hasOwnProperty.call(m, "backgroundDarkArgb"))
+                    w.uint32(21).fixed32(m.backgroundDarkArgb);
                 if (m.isDoodleEnabled != null && Object.hasOwnProperty.call(m, "isDoodleEnabled"))
                     w.uint32(24).bool(m.isDoodleEnabled);
                 return w;
@@ -50156,11 +50156,11 @@ export const proto = $root.proto = (() => {
                         break;
                     switch (t >>> 3) {
                     case 1: {
-                            m.colorLight = r.string();
+                            m.backgroundLightArgb = r.fixed32();
                             break;
                         }
                     case 2: {
-                            m.colorDark = r.string();
+                            m.backgroundDarkArgb = r.fixed32();
                             break;
                         }
                     case 3: {
@@ -50183,11 +50183,11 @@ export const proto = $root.proto = (() => {
                 if (n > $util.recursionLimit)
                     throw Error("maximum nesting depth exceeded");
                 var m = new $root.proto.Message.ChatSolidColorWallpaper();
-                if (d.colorLight != null) {
-                    m.colorLight = String(d.colorLight);
+                if (d.backgroundLightArgb != null) {
+                    m.backgroundLightArgb = d.backgroundLightArgb >>> 0;
                 }
-                if (d.colorDark != null) {
-                    m.colorDark = String(d.colorDark);
+                if (d.backgroundDarkArgb != null) {
+                    m.backgroundDarkArgb = d.backgroundDarkArgb >>> 0;
                 }
                 if (d.isDoodleEnabled != null) {
                     m.isDoodleEnabled = Boolean(d.isDoodleEnabled);
@@ -50199,15 +50199,15 @@ export const proto = $root.proto = (() => {
                 if (!o)
                     o = {};
                 var d = {};
-                if (m.colorLight != null && m.hasOwnProperty("colorLight")) {
-                    d.colorLight = m.colorLight;
+                if (m.backgroundLightArgb != null && m.hasOwnProperty("backgroundLightArgb")) {
+                    d.backgroundLightArgb = m.backgroundLightArgb;
                     if (o.oneofs)
-                        d._colorLight = "colorLight";
+                        d._backgroundLightArgb = "backgroundLightArgb";
                 }
-                if (m.colorDark != null && m.hasOwnProperty("colorDark")) {
-                    d.colorDark = m.colorDark;
+                if (m.backgroundDarkArgb != null && m.hasOwnProperty("backgroundDarkArgb")) {
+                    d.backgroundDarkArgb = m.backgroundDarkArgb;
                     if (o.oneofs)
-                        d._colorDark = "colorDark";
+                        d._backgroundDarkArgb = "backgroundDarkArgb";
                 }
                 if (m.isDoodleEnabled != null && m.hasOwnProperty("isDoodleEnabled")) {
                     d.isDoodleEnabled = m.isDoodleEnabled;
