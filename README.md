@@ -566,13 +566,19 @@ One pairing per number runs at a time — a second call for the same number fail
 
 ## 🖼️ Chat Wallpaper
 
-Set a custom wallpaper (chat theme image) for a group. The image is uploaded as encrypted media and applied with a `CHAT_THEME_SETTING` protocol message, so every member sees the new background.
+Set a custom wallpaper (chat theme image) for a chat or group. The image is uploaded as encrypted media and applied with a `CHAT_THEME_SETTING` protocol message, so every member sees the new background.
 
 > [!NOTE]
 > This needs toxic-baileys — the `chat-wallpaper-image` media type and the `chat_theme` message envelope are fork features. The bot also has to be a group admin, since WhatsApp only lets admins change a group's theme.
 
+```javascript
+// one call — buffer, { url }, or pre-uploaded media
+await sock.setChatWallpaper(jid, fs.readFileSync('./wallpaper.jpg'));
+await sock.setChatWallpaper(jid, { url: 'https://example.com/wallpaper.jpg' }, { dimLevel: 0.3 });
+```
+
 <details>
-<summary>How to set a group wallpaper</summary>
+<summary>Manual way (what setChatWallpaper does under the hood)</summary>
 
 ```javascript
 import { encryptedStream, generateMessageIDV2, proto } from 'toxic-baileys';
@@ -647,7 +653,7 @@ await setGroupWallpaper(sock, jid, buffer);
 
 ## 🎨 Chat Themes
 
-Set one of WhatsApp's built-in chat themes, or a solid background color, for a chat or group. No image upload needed — the theme is applied with the same `CHAT_THEME_SETTING` protocol message as wallpapers.
+Set one of WhatsApp's built-in chat themes, or a solid background color, for a chat or group. No image upload needed — the theme is applied with the same `CHAT_THEME_SETTING` protocol message as wallpapers. Solid colors recolor the whole chat background (light and dark mode separately), with the WhatsApp doodle pattern on or off.
 
 > [!NOTE]
 > This needs toxic-baileys — `setChatTheme`, `setChatThemeColor` and `clearChatTheme` are fork features. For groups, the bot has to be a group admin, since WhatsApp only lets admins change a group's theme.

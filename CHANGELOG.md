@@ -1,3 +1,11 @@
+# 1.9.1 (2026-11-28)
+
+### Fixes
+- **Solid chat theme colors actually change the background now** — `setChatThemeColor` was sending the light/dark colors as hex strings in the `colorLight`/`colorDark` proto fields, which WhatsApp silently ignores, so only the bubble colors of preset themes ever changed. The colors now go out as ARGB numbers in the `backgroundLightArgb`/`backgroundDarkArgb` fields (the format the official app uses), so a solid color theme recolors the whole chat background, with or without the doodle pattern. Hex strings (`colorLight: '#FF69B4'`) are still accepted and converted.
+
+### Features
+- **One-call chat wallpaper** — new `sock.setChatWallpaper(jid, image, options)` uploads an image buffer (or `{ url }`) as encrypted `chat-wallpaper-image` media and applies it as the chat background in one call, for DMs and groups. Pre-uploaded media (`{ directPath, mediaKey, fileEncSha256, fileSha256 }`) is accepted too, and `dimLevel` controls how much the image is dimmed behind messages.
+
 # 1.9.0 (2026-11-27)
 
 ### Features
