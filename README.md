@@ -51,6 +51,7 @@ This is **toxic-baileys** — a feature-packed fork of the Baileys WhatsApp Web 
   - [Media Messages](#media-messages)
   - [Interactive Messages](#interactive-messages)
   - [Album Messages](#album-messages)
+  - [Audio Stickers](#audio-stickers)
   - [Event Messages](#event-messages)
   - [Poll & Poll Result Messages](#poll--poll-result-messages)
   - [Group Status Messages](#group-status-messages)
@@ -1096,6 +1097,123 @@ await sock.sendMessage(jid, {
  ]
 }, { quoted: m });
 ```
+</details>
+
+### Audio Stickers
+
+<details>
+<summary>Send a sticker with sound attached (audio sticker)</summary>
+
+An audio sticker is a normal sticker with an audio track glued to it. WhatsApp carries it as an `audioStickerMessage` (a FutureProof wrapper, Message field 134) holding a `stickerMessage` whose field 26 is the `audioMessage`. When you receive one it decodes to exactly that shape:
+
+```javascript
+const sticker = msg.message.audioStickerMessage.message.stickerMessage;
+const audio = sticker.audioMessage; // the attached sound
+```
+
+Two things make or break an audio sticker:
+
+1. **The sticker image must fill the whole 512×512 square.** If you shrink-to-fit and pad, the sticker shows up small with borders. Scale to *cover* and center-crop instead — full sticker, no borders:
+
+```bash
+# still image -> full sticker
+ffmpeg -i input.jpg -frames:v 1 -vf 'scale=512:512:force_original_aspect_ratio=increase,crop=512:512' -c:v libwebp -f webp sticker.webp
+
+# video -> animated full sticker
+ffmpeg -i input.mp4 -t 25 -vf 'fps=12,scale=512:512:force_original_aspect_ratio=increase,crop=512:512' -c:v libwebp_anim -loop 0 -q:v 60 -f webp sticker.webp
+
+# any audio/video -> opus voice audio (25s cap)
+ffmpeg -i input.mp4 -t 25 -vn -c:a libopus -b:a 64k -ar 48000 -ac 1 -f ogg audio.ogg
+```
+
+2. **Upload both files encrypted, then relay the wrapped payload.** The sticker and audio are uploaded separately (sticker with `WhatsApp Image Keys`, audio with `WhatsApp Audio Keys`), then combined:
+
+```javascript
+import { proto } from 'toxic-baileys';
+import { randomBytes, createCipheriv, createHmac, createHash, hkdfSync } from 'node:crypto';
+import { writeFile, unlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const HKDF = { audio: 'WhatsApp Audio Keys', sticker: 'WhatsApp Image Keys' };
+const varint = n => { const o = []; while (n > 127) { o.push((n % 128) | 128); n = Math.floor(n / 128); } o.push(n); return Buffer.from(o); };
+const ld = (f, body) => Buffer.concat([varint(f * 8 + 2), varint(body.length), body]);
+
+async function upload(sock, plain, kind) {
+  const mediaKey = randomBytes(32);
+  const k = Buffer.from(hkdfSync('sha256', mediaKey, Buffer.alloc(32), HKDF[kind], 112));
+  const iv = k.subarray(0, 16);
+  const cipher = createCipheriv('aes-256-cbc', k.subarray(16, 48), iv);
+  const enc = Buffer.concat([cipher.update(plain), cipher.final()]);
+  const mac = createHmac('sha256', k.subarray(48, 80)).update(iv).update(enc).digest().subarray(0, 10);
+  const file = Buffer.concat([enc, mac]);
+  const tmp = join(tmpdir(), `as-${kind}-${randomBytes(8).toString('hex')}.enc`);
+  await writeFile(tmp, file);
+  try {
+    const res = await sock.waUploadToServer(tmp, {
+      fileEncSha256B64: createHash('sha256').update(file).digest('base64'),
+      mediaType: kind
+    });
+    return {
+      url: res.mediaUrl || `https://mmg.whatsapp.net${res.directPath}`,
+      directPath: res.directPath,
+      mediaKey,
+      fileEncSha256: createHash('sha256').update(file).digest(),
+      fileSha256: createHash('sha256').update(plain).digest(),
+      fileLength: plain.length,
+      mediaKeyTimestamp: Math.floor(Date.now() / 1000)
+    };
+  } finally {
+    unlink(tmp).catch(() => {});
+  }
+}
+
+async function sendAudioSticker(sock, jid, stickerWebp, opusAudio, { width = 512, height = 512, isAnimated = false } = {}) {
+  const [a, s] = await Promise.all([upload(sock, opusAudio, 'audio'), upload(sock, stickerWebp, 'sticker')]);
+  const mediaDomainInfo = key => ld(74, Buffer.concat([Buffer.from([0x08, 0x01]), ld(2, key)]));
+
+  const audioBytes = Buffer.concat([
+    Buffer.from(proto.Message.AudioMessage.encode(proto.Message.AudioMessage.create({
+      url: a.url, mimetype: 'audio/ogg; codecs=opus', fileSha256: a.fileSha256,
+      fileEncSha256: a.fileEncSha256, fileLength: a.fileLength, mediaKey: a.mediaKey,
+      directPath: a.directPath, mediaKeyTimestamp: a.mediaKeyTimestamp
+    })).finish()),
+    ld(17, mediaDomainInfo(a.mediaKey))
+  ]);
+
+  const stickerBase = Buffer.concat([
+    Buffer.from(proto.Message.StickerMessage.encode(proto.Message.StickerMessage.create({
+      url: s.url, fileSha256: s.fileSha256, fileEncSha256: s.fileEncSha256,
+      mediaKey: s.mediaKey, mimetype: 'image/webp', height, width,
+      directPath: s.directPath, fileLength: s.fileLength,
+      mediaKeyTimestamp: s.mediaKeyTimestamp, isAnimated, stickerSentTs: Date.now()
+    })).finish()),
+    ld(17, Buffer.concat([mediaDomainInfo(s.mediaKey), ld(82, varint(13001))]))
+  ]);
+
+  const futureProofBody = ld(1, ld(26, Buffer.concat([stickerBase, ld(26, audioBytes)])));
+  const payload = proto.Message.create({ messageContextInfo: { messageSecret: randomBytes(32) } });
+  const RAW = Symbol('rawFields');
+  payload[RAW] = [[134, futureProofBody]];
+
+  const originalEncode = proto.Message.encode;
+  proto.Message.encode = function (msg, w) {
+    const out = originalEncode.call(this, msg, w);
+    if (msg && msg[RAW]) for (const [f, body] of msg[RAW]) out.uint32(f * 8 + 2).bytes(body);
+    return out;
+  };
+  try {
+    await sock.relayMessage(jid, payload, {});
+  } finally {
+    proto.Message.encode = originalEncode;
+  }
+}
+```
+
+Notes:
+
+- Keep the audio short (25 seconds max works well) and the sticker a full 512×512 webp — animated webp is supported (`isAnimated: true`).
+- The `ld(17, ...)` blocks carry the media-domain info WhatsApp expects on both uploads; the `13001` marker on the sticker side is what flags it as an audio sticker.
 </details>
 
 ### Event Messages
