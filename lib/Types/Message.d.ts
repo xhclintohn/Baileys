@@ -371,6 +371,11 @@ export type ChatThemeColorOptions = {
     colorDark?: string;
     isDoodleEnabled?: boolean;
 };
+export type ChatWallpaperOptions = {
+    dimLevel?: number;
+    settingTimestampMs?: number;
+    mediaUploadTimeoutMs?: number;
+};
 export type MiscMessageGenerationOptions = MinimalRelayOptions & {
     logger?: ILogger;
     timestamp?: Date;
